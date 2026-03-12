@@ -1,4 +1,4 @@
-import { GameState, Enemy, Projectile, XpOrb, MAP_WIDTH, MAP_HEIGHT, Vec2 } from './types';
+import { GameState, Enemy, EnemyType, Projectile, XpOrb, MAP_WIDTH, MAP_HEIGHT, Vec2 } from './types';
 import { getRandomUpgrades } from './upgrades';
 
 let nextId = 1;
