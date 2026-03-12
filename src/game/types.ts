@@ -37,6 +37,7 @@ export interface Enemy {
   type: EnemyType;
   bossVariant?: BossVariant;
   pos: Vec2;
+  prevPos: Vec2; // for animation
   hp: number;
   maxHp: number;
   speed: number;
