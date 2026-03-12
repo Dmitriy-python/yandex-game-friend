@@ -1,21 +1,103 @@
 import { GameState, MAP_WIDTH, MAP_HEIGHT } from './types';
+import playerImg from '@/assets/player.png';
+import enemyNormalImg from '@/assets/enemy-normal.png';
+import enemyFastImg from '@/assets/enemy-fast.png';
+import enemyTankImg from '@/assets/enemy-tank.png';
+import enemyBossImg from '@/assets/enemy-boss.png';
 
 const GRID_SIZE = 80;
 
+// Image cache
+const images: Record<string, HTMLImageElement> = {};
+let imagesLoaded = false;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+export async function preloadImages(): Promise<void> {
+  if (imagesLoaded) return;
+  const [player, normal, fast, tank, boss] = await Promise.all([
+    loadImage(playerImg),
+    loadImage(enemyNormalImg),
+    loadImage(enemyFastImg),
+    loadImage(enemyTankImg),
+    loadImage(enemyBossImg),
+  ]);
+  images.player = player;
+  images.enemyNormal = normal;
+  images.enemyFast = fast;
+  images.enemyTank = tank;
+  images.enemyBoss = boss;
+  imagesLoaded = true;
+}
+
+function drawImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, size: number, rotation = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
+function drawSprite(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, size: number, rotation = 0, flash = false) {
+  const img = images[type];
+  if (!img) return;
+  
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+  
+  if (flash) {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.filter = 'brightness(2) saturate(0)';
+  }
+  
+  ctx.drawImage(img, -size / 2, -size / 2, size, size);
+  ctx.restore();
+}
+
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canvasW: number, canvasH: number) {
+  // Preload images on first frame
+  if (!imagesLoaded) {
+    preloadImages();
+  }
+
   const cam = state.camera;
   const offsetX = canvasW / 2 - cam.x;
   const offsetY = canvasH / 2 - cam.y;
 
-  // Background
-  ctx.fillStyle = '#1a1f2e';
+  // Background with gradient
+  const gradient = ctx.createRadialGradient(canvasW / 2, canvasH / 2, 0, canvasW / 2, canvasH / 2, Math.max(canvasW, canvasH));
+  gradient.addColorStop(0, '#1a2035');
+  gradient.addColorStop(1, '#0f1218');
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   ctx.save();
   ctx.translate(offsetX, offsetY);
 
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  // Ambient particles
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  for (let i = 0; i < 50; i++) {
+    const px = ((i * 137.5) % MAP_WIDTH);
+    const py = ((i * 293.1) % MAP_HEIGHT);
+    const parallaxX = (cam.x - MAP_WIDTH / 2) * 0.02;
+    const parallaxY = (cam.y - MAP_HEIGHT / 2) * 0.02;
+    ctx.beginPath();
+    ctx.arc(px - parallaxX, py - parallaxY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Grid with glow effect
+  ctx.shadowColor = 'rgba(139,92,246,0.3)';
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = 'rgba(139,92,246,0.15)';
   ctx.lineWidth = 1;
   const startX = Math.max(0, Math.floor((cam.x - canvasW / 2) / GRID_SIZE) * GRID_SIZE);
   const endX = Math.min(MAP_WIDTH, cam.x + canvasW / 2 + GRID_SIZE);
@@ -34,139 +116,120 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.lineTo(endX, y);
     ctx.stroke();
   }
+  ctx.shadowBlur = 0;
 
-  // Map border
-  ctx.strokeStyle = 'rgba(255,100,100,0.3)';
-  ctx.lineWidth = 3;
+  // Map border with glow
+  ctx.shadowColor = 'rgba(239,68,68,0.5)';
+  ctx.shadowBlur = 20;
+  ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+  ctx.lineWidth = 4;
   ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+  ctx.shadowBlur = 0;
 
-  // XP orbs
+  // XP orbs with glow
   for (const orb of state.xpOrbs) {
     ctx.beginPath();
     ctx.arc(orb.pos.x, orb.pos.y, orb.radius, 0, Math.PI * 2);
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur = 15;
     ctx.fillStyle = '#4ade80';
     ctx.fill();
-    ctx.shadowColor = '#4ade80';
-    ctx.shadowBlur = 8;
-    ctx.fill();
     ctx.shadowBlur = 0;
+    
+    // Inner bright core
+    ctx.beginPath();
+    ctx.arc(orb.pos.x, orb.pos.y, orb.radius * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#86efac';
+    ctx.fill();
   }
 
   // Enemies
-  const enemyColors: Record<string, { fill: string; stroke: string; hpColor: string }> = {
-    normal: { fill: '#ef4444', stroke: '#991b1b', hpColor: '#ef4444' },
-    fast:   { fill: '#f97316', stroke: '#c2410c', hpColor: '#fb923c' },
-    tank:   { fill: '#6366f1', stroke: '#3730a3', hpColor: '#818cf8' },
-    boss:   { fill: '#dc2626', stroke: '#7f1d1d', hpColor: '#f87171' },
+  const enemySprites: Record<string, { sprite: string; size: number; glow: string }> = {
+    normal: { sprite: 'enemyNormal', size: 50, glow: '#ef4444' },
+    fast:   { sprite: 'enemyFast', size: 35, glow: '#f97316' },
+    tank:   { sprite: 'enemyTank', size: 70, glow: '#6366f1' },
+    boss:   { sprite: 'enemyBoss', size: 100, glow: '#dc2626' },
   };
 
   for (const e of state.enemies) {
-    const colors = enemyColors[e.type] || enemyColors.normal;
-    const fill = e.flashTimer > 0 ? '#fff' : colors.fill;
-
-    // Boss glow
+    const config = enemySprites[e.type];
+    
+    // Glow effect for boss
     if (e.type === 'boss') {
       ctx.beginPath();
-      ctx.arc(e.pos.x, e.pos.y, e.radius + 10, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(220,38,38,0.2)';
+      ctx.arc(e.pos.x, e.pos.y, e.radius + 15, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(220,38,38,0.15)';
       ctx.fill();
       ctx.shadowColor = '#dc2626';
-      ctx.shadowBlur = 15;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.shadowBlur = 25;
     }
 
-    ctx.beginPath();
-    ctx.arc(e.pos.x, e.pos.y, e.radius, 0, Math.PI * 2);
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = colors.stroke;
-    ctx.lineWidth = e.type === 'boss' ? 3 : 2;
-    ctx.stroke();
-
-    // Tank shield marks
-    if (e.type === 'tank') {
-      ctx.beginPath();
-      ctx.arc(e.pos.x, e.pos.y, e.radius * 0.6, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    // Fast enemy spikes
-    if (e.type === 'fast') {
-      for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 + state.time * 5;
-        ctx.beginPath();
-        ctx.arc(e.pos.x + Math.cos(a) * e.radius * 0.7, e.pos.y + Math.sin(a) * e.radius * 0.7, 2, 0, Math.PI * 2);
-        ctx.fillStyle = '#fde68a';
-        ctx.fill();
-      }
-    }
-
-    // Boss crown
-    if (e.type === 'boss') {
-      ctx.fillStyle = '#fbbf24';
-      ctx.font = `${e.radius * 0.8}px serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText('👑', e.pos.x, e.pos.y - e.radius - 5);
-    }
+    // Draw sprite
+    const flash = e.flashTimer > 0;
+    drawSprite(ctx, config.sprite, e.pos.x, e.pos.y, config.size, state.time * 2, flash);
+    ctx.shadowBlur = 0;
 
     // HP bar
     if (e.hp < e.maxHp) {
-      const barW = e.radius * 2;
-      const barH = e.type === 'boss' ? 6 : 4;
+      const barW = e.type === 'boss' ? 80 : e.type === 'tank' ? 60 : 40;
+      const barH = e.type === 'boss' ? 8 : 5;
       const barX = e.pos.x - barW / 2;
-      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 22 : 8);
-      ctx.fillStyle = '#333';
-      ctx.fillRect(barX, barY, barW, barH);
-      ctx.fillStyle = colors.hpColor;
-      ctx.fillRect(barX, barY, barW * (e.hp / e.maxHp), barH);
+      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 25 : 12);
+      
+      // Bar background
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
+      ctx.fill();
+      
+      // Health fill
+      const hpPercent = e.hp / e.maxHp;
+      ctx.fillStyle = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
+      ctx.roundRect(barX, barY, barW * hpPercent, barH, 2);
+      ctx.fill();
     }
   }
 
-  // Projectiles
+  // Projectiles with trail
   for (const p of state.projectiles) {
+    // Trail
+    ctx.beginPath();
+    ctx.moveTo(p.pos.x, p.pos.y);
+    ctx.lineTo(p.pos.x - p.vel.x * 0.03, p.pos.y - p.vel.y * 0.03);
+    ctx.strokeStyle = 'rgba(250,204,21,0.4)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    // Core
     ctx.beginPath();
     ctx.arc(p.pos.x, p.pos.y, p.radius, 0, Math.PI * 2);
-    ctx.fillStyle = '#facc15';
-    ctx.fill();
     ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = '#facc15';
     ctx.fill();
     ctx.shadowBlur = 0;
   }
 
   // Player
   const p = state.player;
-  // Glow
-  ctx.beginPath();
-  ctx.arc(p.pos.x, p.pos.y, p.radius + 6, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(59,130,246,0.2)';
-  ctx.fill();
-  // Body
-  ctx.beginPath();
-  ctx.arc(p.pos.x, p.pos.y, p.radius, 0, Math.PI * 2);
-  ctx.fillStyle = '#3b82f6';
-  ctx.fill();
-  ctx.strokeStyle = '#1d4ed8';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  // Eyes
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.arc(p.pos.x - 5, p.pos.y - 3, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(p.pos.x + 5, p.pos.y - 3, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Attack range indicator (subtle)
+  
+  // Attack range indicator (subtle ring)
   ctx.beginPath();
   ctx.arc(p.pos.x, p.pos.y, p.attackRange, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(59,130,246,0.08)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(59,130,246,0.05)';
+  ctx.lineWidth = 2;
   ctx.stroke();
+
+  // Player glow
+  ctx.beginPath();
+  ctx.arc(p.pos.x, p.pos.y, p.radius + 15, 0, Math.PI * 2);
+  ctx.shadowColor = '#3b82f6';
+  ctx.shadowBlur = 25;
+  ctx.fillStyle = 'rgba(59,130,246,0.2)';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Draw player sprite
+  drawSprite(ctx, 'player', p.pos.x, p.pos.y, 60);
 
   ctx.restore();
 }
