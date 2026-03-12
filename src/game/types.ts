@@ -108,5 +108,7 @@ export interface UpgradeOption {
   apply: (state: GameState) => void;
 }
 
-export const MAP_WIDTH = 2000;
-export const MAP_HEIGHT = 2000;
+export const MAP_WIDTH = 4000;
+export const MAP_HEIGHT = 4000;
+
+export type CharacterClass = 'fighter' | 'mage' | 'archer';
