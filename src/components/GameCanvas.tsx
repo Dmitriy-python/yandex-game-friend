@@ -181,7 +181,7 @@ export default function GameCanvas() {
 
   // Character select
   if (screen === 'character_select') {
-    return <CharacterSelect onBack={() => setScreen('menu')} />;
+    return <CharacterSelect selected={selectedClass} onSelect={setSelectedClass} onBack={() => setScreen('menu')} />;
   }
 
   return (
