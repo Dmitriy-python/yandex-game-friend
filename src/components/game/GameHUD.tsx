@@ -1,5 +1,3 @@
-import { GameState } from '@/game/types';
-
 interface GameHUDProps {
   hp: number; maxHp: number;
   xp: number; xpToNext: number;
