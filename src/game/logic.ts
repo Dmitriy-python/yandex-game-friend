@@ -145,9 +145,11 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   // Player movement
   const moveDir = normalize({ x: input.dx, y: input.dy });
   s.player = { ...s.player };
+  s.player.vel = { x: moveDir.x * s.player.speed, y: moveDir.y * s.player.speed };
   s.player.pos = {
     x: Math.max(s.player.radius, Math.min(MAP_WIDTH - s.player.radius, s.player.pos.x + moveDir.x * s.player.speed * dt)),
     y: Math.max(s.player.radius, Math.min(MAP_HEIGHT - s.player.radius, s.player.pos.y + moveDir.y * s.player.speed * dt)),
+  };
   };
   s.camera = { ...s.player.pos };
 
