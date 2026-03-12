@@ -40,6 +40,7 @@ export default function GameCanvas() {
   const stateRef = useRef<GameState>(createInitialState());
   const keysRef = useRef<Set<string>>(new Set());
   const [screen, setScreen] = useState<GameScreen>('loading');
+  const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
   const [highScoreData, setHighScoreData] = useState(loadHighScore);
   const [uiState, setUiState] = useState({
     hp: 100, maxHp: 100, xp: 0, xpToNext: 10, level: 1,
