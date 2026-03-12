@@ -48,25 +48,55 @@ function normalize(v: Vec2): Vec2 {
   return { x: v.x / len, y: v.y / len };
 }
 
-function spawnEnemy(state: GameState): Enemy {
+function spawnPos(state: GameState, extraDist = 0): Vec2 {
   const angle = Math.random() * Math.PI * 2;
-  const spawnDist = 500 + Math.random() * 200;
-  const waveMultiplier = 1 + (state.wave - 1) * 0.15;
-  
+  const spawnDist = 500 + Math.random() * 200 + extraDist;
   return {
-    id: nextId++,
-    pos: {
-      x: Math.max(0, Math.min(MAP_WIDTH, state.player.pos.x + Math.cos(angle) * spawnDist)),
-      y: Math.max(0, Math.min(MAP_HEIGHT, state.player.pos.y + Math.sin(angle) * spawnDist)),
-    },
-    hp: 30 * waveMultiplier,
-    maxHp: 30 * waveMultiplier,
-    speed: 60 + Math.random() * 40 + state.wave * 3,
-    damage: 10 + state.wave * 2,
-    radius: 12 + Math.random() * 6,
-    xpValue: 1 + Math.floor(state.wave / 3),
-    flashTimer: 0,
+    x: Math.max(0, Math.min(MAP_WIDTH, state.player.pos.x + Math.cos(angle) * spawnDist)),
+    y: Math.max(0, Math.min(MAP_HEIGHT, state.player.pos.y + Math.sin(angle) * spawnDist)),
   };
+}
+
+function spawnEnemy(state: GameState, forceType?: EnemyType): Enemy {
+  const wm = 1 + (state.wave - 1) * 0.15;
+
+  // Determine type
+  let type: EnemyType = forceType || 'normal';
+  if (!forceType) {
+    const roll = Math.random();
+    if (state.wave >= 3 && roll < 0.2) type = 'fast';
+    else if (state.wave >= 4 && roll < 0.35) type = 'tank';
+  }
+
+  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'flashTimer' | 'type'>> = {
+    normal: {
+      hp: 30 * wm, maxHp: 30 * wm,
+      speed: 60 + Math.random() * 40 + state.wave * 3,
+      damage: 10 + state.wave * 2,
+      radius: 13, xpValue: 1 + Math.floor(state.wave / 3),
+    },
+    fast: {
+      hp: 15 * wm, maxHp: 15 * wm,
+      speed: 130 + Math.random() * 40 + state.wave * 4,
+      damage: 6 + state.wave,
+      radius: 8, xpValue: 1 + Math.floor(state.wave / 3),
+    },
+    tank: {
+      hp: 100 * wm, maxHp: 100 * wm,
+      speed: 35 + state.wave * 2,
+      damage: 20 + state.wave * 3,
+      radius: 22, xpValue: 3 + Math.floor(state.wave / 2),
+    },
+    boss: {
+      hp: 500 * wm, maxHp: 500 * wm,
+      speed: 45 + state.wave,
+      damage: 30 + state.wave * 4,
+      radius: 36, xpValue: 20 + state.wave * 2,
+    },
+  };
+
+  const cfg = configs[type];
+  return { id: nextId++, type, pos: spawnPos(state, type === 'boss' ? 200 : 0), ...cfg, flashTimer: 0 };
 }
 
 function findClosestEnemy(state: GameState): Enemy | null {
