@@ -388,3 +388,4 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   return s;
 }
+
