@@ -266,6 +266,7 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     });
     return {
       ...e,
+      prevPos: { ...e.pos },
       pos: { x: e.pos.x + dir.x * e.speed * dt, y: e.pos.y + dir.y * e.speed * dt },
       flashTimer: Math.max(0, e.flashTimer - dt),
     };
