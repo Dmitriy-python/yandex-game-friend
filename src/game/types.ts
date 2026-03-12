@@ -17,13 +17,23 @@ export interface Player {
   attackRange: number;
   projectileSpeed: number;
   radius: number;
+  // Melee
+  meleeRange: number;
+  meleeDamage: number;
+  meleeCooldown: number;
+  meleeTimer: number;
+  meleeSwingTimer: number; // visual swing animation timer
+  meleeSwingDuration: number;
 }
 
 export type EnemyType = 'normal' | 'fast' | 'tank' | 'boss';
 
+export type BossVariant = 'infernal' | 'frost' | 'shadow' | 'thunder';
+
 export interface Enemy {
   id: number;
   type: EnemyType;
+  bossVariant?: BossVariant;
   pos: Vec2;
   hp: number;
   maxHp: number;
@@ -50,11 +60,21 @@ export interface XpOrb {
   radius: number;
 }
 
+export interface Chest {
+  id: number;
+  pos: Vec2;
+  radius: number;
+  collected: boolean;
+}
+
+export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'playing' | 'paused' | 'game_over';
+
 export interface GameState {
   player: Player;
   enemies: Enemy[];
   projectiles: Projectile[];
   xpOrbs: XpOrb[];
+  chests: Chest[];
   time: number;
   score: number;
   wave: number;
@@ -65,7 +85,21 @@ export interface GameState {
   pendingUpgrade: boolean;
   upgradeOptions: UpgradeOption[];
   camera: Vec2;
+  isBossWave: boolean;
+  bossWaveCleared: boolean;
+  // Events for audio
+  events: GameEvent[];
 }
+
+export type GameEvent = 
+  | { type: 'shoot' }
+  | { type: 'hit' }
+  | { type: 'kill' }
+  | { type: 'melee_swing' }
+  | { type: 'chest_open' }
+  | { type: 'level_up' }
+  | { type: 'boss_spawn' }
+  | { type: 'player_hit' };
 
 export interface UpgradeOption {
   id: string;
@@ -74,5 +108,5 @@ export interface UpgradeOption {
   apply: (state: GameState) => void;
 }
 
-export const MAP_WIDTH = 3000;
-export const MAP_HEIGHT = 3000;
+export const MAP_WIDTH = 2000;
+export const MAP_HEIGHT = 2000;
