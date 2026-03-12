@@ -53,25 +53,74 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   }
 
   // Enemies
+  const enemyColors: Record<string, { fill: string; stroke: string; hpColor: string }> = {
+    normal: { fill: '#ef4444', stroke: '#991b1b', hpColor: '#ef4444' },
+    fast:   { fill: '#f97316', stroke: '#c2410c', hpColor: '#fb923c' },
+    tank:   { fill: '#6366f1', stroke: '#3730a3', hpColor: '#818cf8' },
+    boss:   { fill: '#dc2626', stroke: '#7f1d1d', hpColor: '#f87171' },
+  };
+
   for (const e of state.enemies) {
-    const fill = e.flashTimer > 0 ? '#fff' : '#ef4444';
+    const colors = enemyColors[e.type] || enemyColors.normal;
+    const fill = e.flashTimer > 0 ? '#fff' : colors.fill;
+
+    // Boss glow
+    if (e.type === 'boss') {
+      ctx.beginPath();
+      ctx.arc(e.pos.x, e.pos.y, e.radius + 10, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(220,38,38,0.2)';
+      ctx.fill();
+      ctx.shadowColor = '#dc2626';
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
     ctx.beginPath();
     ctx.arc(e.pos.x, e.pos.y, e.radius, 0, Math.PI * 2);
     ctx.fillStyle = fill;
     ctx.fill();
-    ctx.strokeStyle = '#991b1b';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = colors.stroke;
+    ctx.lineWidth = e.type === 'boss' ? 3 : 2;
     ctx.stroke();
+
+    // Tank shield marks
+    if (e.type === 'tank') {
+      ctx.beginPath();
+      ctx.arc(e.pos.x, e.pos.y, e.radius * 0.6, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Fast enemy spikes
+    if (e.type === 'fast') {
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2 + state.time * 5;
+        ctx.beginPath();
+        ctx.arc(e.pos.x + Math.cos(a) * e.radius * 0.7, e.pos.y + Math.sin(a) * e.radius * 0.7, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fde68a';
+        ctx.fill();
+      }
+    }
+
+    // Boss crown
+    if (e.type === 'boss') {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = `${e.radius * 0.8}px serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText('👑', e.pos.x, e.pos.y - e.radius - 5);
+    }
 
     // HP bar
     if (e.hp < e.maxHp) {
       const barW = e.radius * 2;
-      const barH = 4;
+      const barH = e.type === 'boss' ? 6 : 4;
       const barX = e.pos.x - barW / 2;
-      const barY = e.pos.y - e.radius - 8;
+      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 22 : 8);
       ctx.fillStyle = '#333';
       ctx.fillRect(barX, barY, barW, barH);
-      ctx.fillStyle = '#ef4444';
+      ctx.fillStyle = colors.hpColor;
       ctx.fillRect(barX, barY, barW * (e.hp / e.maxHp), barH);
     }
   }
