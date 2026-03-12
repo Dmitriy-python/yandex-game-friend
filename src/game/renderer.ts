@@ -1,11 +1,15 @@
-import { GameState, MAP_WIDTH, MAP_HEIGHT } from './types';
+import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass } from './types';
 import playerImg from '@/assets/player.png';
+import playerMageImg from '@/assets/player-mage.png';
+import playerArcherImg from '@/assets/player-archer.png';
 import enemyNormalImg from '@/assets/enemy-normal.png';
 import enemyFastImg from '@/assets/enemy-fast.png';
 import enemyTankImg from '@/assets/enemy-tank.png';
 import enemyBossImg from '@/assets/enemy-boss.png';
+import groundTileImg from '@/assets/ground-tile.png';
 
 const GRID_SIZE = 80;
+const TILE_SIZE = 256;
 
 const images: Record<string, HTMLImageElement> = {};
 let imagesLoaded = false;
@@ -21,24 +25,36 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export async function preloadImages(): Promise<void> {
   if (imagesLoaded) return;
-  const [player, normal, fast, tank, boss] = await Promise.all([
-    loadImage(playerImg), loadImage(enemyNormalImg),
-    loadImage(enemyFastImg), loadImage(enemyTankImg), loadImage(enemyBossImg),
+  const [player, mage, archer, normal, fast, tank, boss, ground] = await Promise.all([
+    loadImage(playerImg), loadImage(playerMageImg), loadImage(playerArcherImg),
+    loadImage(enemyNormalImg), loadImage(enemyFastImg),
+    loadImage(enemyTankImg), loadImage(enemyBossImg),
+    loadImage(groundTileImg),
   ]);
   images.player = player;
+  images.playerMage = mage;
+  images.playerArcher = archer;
   images.enemyNormal = normal;
   images.enemyFast = fast;
   images.enemyTank = tank;
   images.enemyBoss = boss;
+  images.ground = ground;
   imagesLoaded = true;
 }
 
-function drawSprite(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, size: number, rotation = 0, flash = false) {
+const playerSpriteMap: Record<CharacterClass, string> = {
+  fighter: 'player',
+  mage: 'playerMage',
+  archer: 'playerArcher',
+};
+
+function drawSprite(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, size: number, rotation = 0, flash = false, scaleY = 1) {
   const img = images[type];
   if (!img) return;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
+  ctx.scale(1, scaleY);
   if (flash) ctx.filter = 'brightness(2) saturate(0)';
   ctx.drawImage(img, -size / 2, -size / 2, size, size);
   ctx.restore();
@@ -67,8 +83,24 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.save();
   ctx.translate(offsetX, offsetY);
 
-  // Grid
-  ctx.strokeStyle = 'rgba(139,92,246,0.12)';
+  // Ground tiles
+  if (images.ground) {
+    const startTX = Math.max(0, Math.floor((cam.x - canvasW / 2) / TILE_SIZE));
+    const endTX = Math.min(Math.ceil(MAP_WIDTH / TILE_SIZE), Math.ceil((cam.x + canvasW / 2) / TILE_SIZE));
+    const startTY = Math.max(0, Math.floor((cam.y - canvasH / 2) / TILE_SIZE));
+    const endTY = Math.min(Math.ceil(MAP_HEIGHT / TILE_SIZE), Math.ceil((cam.y + canvasH / 2) / TILE_SIZE));
+    for (let tx = startTX; tx < endTX; tx++) {
+      for (let ty = startTY; ty < endTY; ty++) {
+        ctx.drawImage(images.ground, tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      }
+    }
+    // Darken edges with vignette overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+  }
+
+  // Grid overlay
+  ctx.strokeStyle = 'rgba(139,92,246,0.06)';
   ctx.lineWidth = 1;
   const startX = Math.max(0, Math.floor((cam.x - canvasW / 2) / GRID_SIZE) * GRID_SIZE);
   const endX = Math.min(MAP_WIDTH, cam.x + canvasW / 2 + GRID_SIZE);
@@ -106,7 +138,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     const bob = Math.sin(state.time * 3) * 3;
     ctx.save();
     ctx.translate(chest.pos.x, chest.pos.y + bob);
-    // Glow
     ctx.beginPath();
     ctx.arc(0, 0, chest.radius + 10, 0, Math.PI * 2);
     ctx.shadowColor = '#fbbf24';
@@ -114,16 +145,13 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.fillStyle = 'rgba(251,191,36,0.2)';
     ctx.fill();
     ctx.shadowBlur = 0;
-    // Chest body
     ctx.fillStyle = '#92400e';
     ctx.fillRect(-14, -10, 28, 20);
     ctx.fillStyle = '#b45309';
     ctx.fillRect(-14, -10, 28, 10);
-    // Gold band
     ctx.fillStyle = '#fbbf24';
     ctx.fillRect(-14, -2, 28, 4);
     ctx.fillRect(-3, -10, 6, 20);
-    // Lock
     ctx.beginPath();
     ctx.arc(0, 0, 4, 0, Math.PI * 2);
     ctx.fillStyle = '#fef3c7';
@@ -131,7 +159,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.restore();
   }
 
-  // Enemies
+  // Enemies with movement animation
   const enemySprites: Record<string, { sprite: string; size: number }> = {
     normal: { sprite: 'enemyNormal', size: 50 },
     fast: { sprite: 'enemyFast', size: 35 },
@@ -142,6 +170,14 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   for (const e of state.enemies) {
     const config = enemySprites[e.type];
 
+    // Movement animation: bobbing + tilt
+    const dx = e.pos.x - e.prevPos.x;
+    const dy = e.pos.y - e.prevPos.y;
+    const isMoving = Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1;
+    const bobAmount = isMoving ? Math.sin(state.time * 10 + e.id * 1.7) * 3 : 0;
+    const tilt = isMoving ? Math.sin(state.time * 8 + e.id * 2.3) * 0.08 : 0;
+    const squash = isMoving ? 1 + Math.sin(state.time * 12 + e.id) * 0.05 : 1;
+
     if (e.type === 'boss') {
       ctx.beginPath();
       ctx.arc(e.pos.x, e.pos.y, e.radius + 15, 0, Math.PI * 2);
@@ -149,7 +185,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
       ctx.fill();
     }
 
-    drawSprite(ctx, config.sprite, e.pos.x, e.pos.y, config.size, 0, e.flashTimer > 0);
+    drawSprite(ctx, config.sprite, e.pos.x, e.pos.y + bobAmount, config.size, tilt, e.flashTimer > 0, squash);
 
     // HP bar
     if (e.hp < e.maxHp) {
@@ -188,6 +224,13 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
 
   // Player
   const p = state.player;
+  const playerSprite = playerSpriteMap[p.characterClass];
+
+  // Movement animation
+  const pMoving = Math.abs(p.vel.x) > 1 || Math.abs(p.vel.y) > 1;
+  const pBob = pMoving ? Math.sin(state.time * 12) * 4 : 0;
+  const pTilt = pMoving ? Math.sin(state.time * 8) * 0.06 : 0;
+  const pSquash = pMoving ? 1 + Math.sin(state.time * 14) * 0.04 : 1;
 
   // Attack range (subtle)
   ctx.beginPath();
@@ -203,7 +246,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     const endAngle = startAngle + Math.PI * 1.2;
     const alpha = p.meleeSwingTimer / p.meleeSwingDuration;
 
-    // Swing arc
     ctx.beginPath();
     ctx.arc(p.pos.x, p.pos.y, p.meleeRange, startAngle, endAngle);
     ctx.strokeStyle = `rgba(251,191,36,${alpha * 0.8})`;
@@ -213,7 +255,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.stroke();
     ctx.shadowBlur = 0;
 
-    // Melee range fill
     ctx.beginPath();
     ctx.moveTo(p.pos.x, p.pos.y);
     ctx.arc(p.pos.x, p.pos.y, p.meleeRange, startAngle, endAngle);
@@ -222,17 +263,23 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.fill();
   }
 
-  // Player glow
+  // Player glow (class-colored)
+  const glowColors: Record<CharacterClass, string> = {
+    fighter: '#3b82f6',
+    mage: '#8b5cf6',
+    archer: '#22c55e',
+  };
+  const glowColor = glowColors[p.characterClass];
   ctx.beginPath();
   ctx.arc(p.pos.x, p.pos.y, p.radius + 15, 0, Math.PI * 2);
-  ctx.shadowColor = '#3b82f6';
+  ctx.shadowColor = glowColor;
   ctx.shadowBlur = 25;
-  ctx.fillStyle = 'rgba(59,130,246,0.2)';
+  ctx.fillStyle = `${glowColor}33`;
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // Player sprite
-  drawSprite(ctx, 'player', p.pos.x, p.pos.y, 60);
+  // Player sprite with animation
+  drawSprite(ctx, playerSprite, p.pos.x, p.pos.y + pBob, 60, pTilt, false, pSquash);
 
   ctx.restore();
 
