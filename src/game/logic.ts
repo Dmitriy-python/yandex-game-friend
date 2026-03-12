@@ -5,17 +5,39 @@ let nextId = 1;
 
 const BOSS_VARIANTS: BossVariant[] = ['infernal', 'frost', 'shadow', 'thunder'];
 
-export function createInitialState(): GameState {
+const CLASS_STATS: Record<CharacterClass, Partial<GameState['player']>> = {
+  fighter: {
+    attackDamage: 20, attackCooldown: 0.5, attackRange: 300,
+    projectileSpeed: 400, speed: 200, maxHp: 100,
+    meleeDamage: 35, meleeRange: 60, meleeCooldown: 0.8,
+  },
+  mage: {
+    attackDamage: 30, attackCooldown: 0.7, attackRange: 400,
+    projectileSpeed: 350, speed: 170, maxHp: 75,
+    meleeDamage: 15, meleeRange: 40, meleeCooldown: 1.2,
+  },
+  archer: {
+    attackDamage: 18, attackCooldown: 0.3, attackRange: 450,
+    projectileSpeed: 550, speed: 230, maxHp: 80,
+    meleeDamage: 20, meleeRange: 45, meleeCooldown: 1.0,
+  },
+};
+
+export function createInitialState(characterClass: CharacterClass = 'fighter'): GameState {
+  const classStats = CLASS_STATS[characterClass];
+  const maxHp = classStats.maxHp || 100;
   return {
     player: {
       pos: { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 },
-      hp: 100, maxHp: 100, speed: 200,
+      vel: { x: 0, y: 0 },
+      hp: maxHp, maxHp, speed: classStats.speed || 200,
       xp: 0, xpToNext: 10, level: 1,
-      attackCooldown: 0.5, attackTimer: 0,
-      attackDamage: 20, attackRange: 300,
-      projectileSpeed: 400, radius: 16,
-      meleeRange: 60, meleeDamage: 35,
-      meleeCooldown: 0.8, meleeTimer: 0,
+      attackCooldown: classStats.attackCooldown || 0.5, attackTimer: 0,
+      attackDamage: classStats.attackDamage || 20, attackRange: classStats.attackRange || 300,
+      projectileSpeed: classStats.projectileSpeed || 400, radius: 16,
+      characterClass,
+      meleeRange: classStats.meleeRange || 60, meleeDamage: classStats.meleeDamage || 35,
+      meleeCooldown: classStats.meleeCooldown || 0.8, meleeTimer: 0,
       meleeSwingTimer: 0, meleeSwingDuration: 0.3,
     },
     enemies: [], projectiles: [], xpOrbs: [], chests: [],
