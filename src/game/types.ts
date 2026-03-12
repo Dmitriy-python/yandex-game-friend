@@ -19,8 +19,11 @@ export interface Player {
   radius: number;
 }
 
+export type EnemyType = 'normal' | 'fast' | 'tank' | 'boss';
+
 export interface Enemy {
   id: number;
+  type: EnemyType;
   pos: Vec2;
   hp: number;
   maxHp: number;

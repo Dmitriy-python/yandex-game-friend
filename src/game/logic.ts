@@ -142,9 +142,15 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   }
 
   // Wave progression
+  const prevWave = s.wave;
   if (s.time > s.wave * 30) {
     s.wave++;
     s.spawnInterval = Math.max(0.3, s.spawnInterval * 0.9);
+    // Boss every 5 waves
+    if (s.wave % 5 === 0) {
+      s.enemies = [...s.enemies];
+      s.enemies.push(spawnEnemy(s, 'boss'));
+    }
   }
 
   // Auto-attack
