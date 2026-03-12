@@ -3,7 +3,7 @@ import { useGameLoop } from '@/hooks/useGameLoop';
 import { createInitialState, updateGame } from '@/game/logic';
 import { renderGame } from '@/game/renderer';
 import { processGameEvents, startMusic, stopMusic } from '@/game/audio';
-import { GameState, GameScreen } from '@/game/types';
+import { GameState, GameScreen, CharacterClass } from '@/game/types';
 import LoadingScreen from './game/LoadingScreen';
 import MainMenu from './game/MainMenu';
 import PauseMenu from './game/PauseMenu';
