@@ -1,21 +1,43 @@
-import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
 
 const BOSS_VARIANTS: BossVariant[] = ['infernal', 'frost', 'shadow', 'thunder'];
 
-export function createInitialState(): GameState {
+const CLASS_STATS: Record<CharacterClass, Partial<GameState['player']>> = {
+  fighter: {
+    attackDamage: 20, attackCooldown: 0.5, attackRange: 300,
+    projectileSpeed: 400, speed: 200, maxHp: 100,
+    meleeDamage: 35, meleeRange: 60, meleeCooldown: 0.8,
+  },
+  mage: {
+    attackDamage: 30, attackCooldown: 0.7, attackRange: 400,
+    projectileSpeed: 350, speed: 170, maxHp: 75,
+    meleeDamage: 15, meleeRange: 40, meleeCooldown: 1.2,
+  },
+  archer: {
+    attackDamage: 18, attackCooldown: 0.3, attackRange: 450,
+    projectileSpeed: 550, speed: 230, maxHp: 80,
+    meleeDamage: 20, meleeRange: 45, meleeCooldown: 1.0,
+  },
+};
+
+export function createInitialState(characterClass: CharacterClass = 'fighter'): GameState {
+  const classStats = CLASS_STATS[characterClass];
+  const maxHp = classStats.maxHp || 100;
   return {
     player: {
       pos: { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 },
-      hp: 100, maxHp: 100, speed: 200,
+      vel: { x: 0, y: 0 },
+      hp: maxHp, maxHp, speed: classStats.speed || 200,
       xp: 0, xpToNext: 10, level: 1,
-      attackCooldown: 0.5, attackTimer: 0,
-      attackDamage: 20, attackRange: 300,
-      projectileSpeed: 400, radius: 16,
-      meleeRange: 60, meleeDamage: 35,
-      meleeCooldown: 0.8, meleeTimer: 0,
+      attackCooldown: classStats.attackCooldown || 0.5, attackTimer: 0,
+      attackDamage: classStats.attackDamage || 20, attackRange: classStats.attackRange || 300,
+      projectileSpeed: classStats.projectileSpeed || 400, radius: 16,
+      characterClass,
+      meleeRange: classStats.meleeRange || 60, meleeDamage: classStats.meleeDamage || 35,
+      meleeCooldown: classStats.meleeCooldown || 0.8, meleeTimer: 0,
       meleeSwingTimer: 0, meleeSwingDuration: 0.3,
     },
     enemies: [], projectiles: [], xpOrbs: [], chests: [],
@@ -64,7 +86,7 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     else if (state.wave >= 4 && roll < 0.35) type = 'tank';
   }
 
-  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'flashTimer' | 'type' | 'bossVariant'>> = {
+  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant'>> = {
     normal: {
       hp: 30 * wm, maxHp: 30 * wm,
       speed: 60 + Math.random() * 40 + state.wave * 3,
@@ -92,8 +114,9 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
   };
 
   const cfg = configs[type];
+  const pos = spawnPos(state, type === 'boss' ? 200 : 0);
   return {
-    id: nextId++, type, pos: spawnPos(state, type === 'boss' ? 200 : 0),
+    id: nextId++, type, pos, prevPos: { ...pos },
     ...cfg, flashTimer: 0,
     bossVariant: type === 'boss' ? (bossVariant || getBossVariantForWave(state.wave)) : undefined,
   };
@@ -122,6 +145,7 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   // Player movement
   const moveDir = normalize({ x: input.dx, y: input.dy });
   s.player = { ...s.player };
+  s.player.vel = { x: moveDir.x * s.player.speed, y: moveDir.y * s.player.speed };
   s.player.pos = {
     x: Math.max(s.player.radius, Math.min(MAP_WIDTH - s.player.radius, s.player.pos.x + moveDir.x * s.player.speed * dt)),
     y: Math.max(s.player.radius, Math.min(MAP_HEIGHT - s.player.radius, s.player.pos.y + moveDir.y * s.player.speed * dt)),
@@ -241,6 +265,7 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     });
     return {
       ...e,
+      prevPos: { ...e.pos },
       pos: { x: e.pos.x + dir.x * e.speed * dt, y: e.pos.y + dir.y * e.speed * dt },
       flashTimer: Math.max(0, e.flashTimer - dt),
     };
@@ -362,3 +387,4 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   return s;
 }
+

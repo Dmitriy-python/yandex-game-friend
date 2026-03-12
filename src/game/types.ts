@@ -1,3 +1,5 @@
+export type CharacterClass = 'fighter' | 'mage' | 'archer';
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -5,6 +7,7 @@ export interface Vec2 {
 
 export interface Player {
   pos: Vec2;
+  vel: Vec2; // for animation tracking
   hp: number;
   maxHp: number;
   speed: number;
@@ -17,12 +20,13 @@ export interface Player {
   attackRange: number;
   projectileSpeed: number;
   radius: number;
+  characterClass: CharacterClass;
   // Melee
   meleeRange: number;
   meleeDamage: number;
   meleeCooldown: number;
   meleeTimer: number;
-  meleeSwingTimer: number; // visual swing animation timer
+  meleeSwingTimer: number;
   meleeSwingDuration: number;
 }
 
@@ -35,6 +39,7 @@ export interface Enemy {
   type: EnemyType;
   bossVariant?: BossVariant;
   pos: Vec2;
+  prevPos: Vec2; // for animation
   hp: number;
   maxHp: number;
   speed: number;
@@ -108,5 +113,6 @@ export interface UpgradeOption {
   apply: (state: GameState) => void;
 }
 
-export const MAP_WIDTH = 2000;
-export const MAP_HEIGHT = 2000;
+export const MAP_WIDTH = 4000;
+export const MAP_HEIGHT = 4000;
+

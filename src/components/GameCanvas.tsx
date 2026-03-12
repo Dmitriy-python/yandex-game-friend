@@ -3,7 +3,7 @@ import { useGameLoop } from '@/hooks/useGameLoop';
 import { createInitialState, updateGame } from '@/game/logic';
 import { renderGame } from '@/game/renderer';
 import { processGameEvents, startMusic, stopMusic } from '@/game/audio';
-import { GameState, GameScreen } from '@/game/types';
+import { GameState, GameScreen, CharacterClass } from '@/game/types';
 import LoadingScreen from './game/LoadingScreen';
 import MainMenu from './game/MainMenu';
 import PauseMenu from './game/PauseMenu';
@@ -40,6 +40,7 @@ export default function GameCanvas() {
   const stateRef = useRef<GameState>(createInitialState());
   const keysRef = useRef<Set<string>>(new Set());
   const [screen, setScreen] = useState<GameScreen>('loading');
+  const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
   const [highScoreData, setHighScoreData] = useState(loadHighScore);
   const [uiState, setUiState] = useState({
     hp: 100, maxHp: 100, xp: 0, xpToNext: 10, level: 1,
@@ -144,10 +145,10 @@ export default function GameCanvas() {
   }, []);
 
   const handleStartGame = useCallback(() => {
-    stateRef.current = createInitialState();
+    stateRef.current = createInitialState(selectedClass);
     setScreen('playing');
     startMusic();
-  }, []);
+  }, [selectedClass]);
 
   const handleResume = useCallback(() => {
     stateRef.current.paused = false;
@@ -180,7 +181,7 @@ export default function GameCanvas() {
 
   // Character select
   if (screen === 'character_select') {
-    return <CharacterSelect onBack={() => setScreen('menu')} />;
+    return <CharacterSelect selected={selectedClass} onSelect={setSelectedClass} onBack={() => setScreen('menu')} />;
   }
 
   return (
