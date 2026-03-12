@@ -5,6 +5,7 @@ export interface Vec2 {
 
 export interface Player {
   pos: Vec2;
+  vel: Vec2; // for animation tracking
   hp: number;
   maxHp: number;
   speed: number;
@@ -17,12 +18,13 @@ export interface Player {
   attackRange: number;
   projectileSpeed: number;
   radius: number;
+  characterClass: CharacterClass;
   // Melee
   meleeRange: number;
   meleeDamage: number;
   meleeCooldown: number;
   meleeTimer: number;
-  meleeSwingTimer: number; // visual swing animation timer
+  meleeSwingTimer: number;
   meleeSwingDuration: number;
 }
 
