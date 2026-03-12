@@ -145,10 +145,10 @@ export default function GameCanvas() {
   }, []);
 
   const handleStartGame = useCallback(() => {
-    stateRef.current = createInitialState();
+    stateRef.current = createInitialState(selectedClass);
     setScreen('playing');
     startMusic();
-  }, []);
+  }, [selectedClass]);
 
   const handleResume = useCallback(() => {
     stateRef.current.paused = false;
