@@ -86,7 +86,7 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     else if (state.wave >= 4 && roll < 0.35) type = 'tank';
   }
 
-  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'flashTimer' | 'type' | 'bossVariant'>> = {
+  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant'>> = {
     normal: {
       hp: 30 * wm, maxHp: 30 * wm,
       speed: 60 + Math.random() * 40 + state.wave * 3,
@@ -114,8 +114,9 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
   };
 
   const cfg = configs[type];
+  const pos = spawnPos(state, type === 'boss' ? 200 : 0);
   return {
-    id: nextId++, type, pos: spawnPos(state, type === 'boss' ? 200 : 0),
+    id: nextId++, type, pos, prevPos: { ...pos },
     ...cfg, flashTimer: 0,
     bossVariant: type === 'boss' ? (bossVariant || getBossVariantForWave(state.wave)) : undefined,
   };
