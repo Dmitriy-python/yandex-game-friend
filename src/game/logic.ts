@@ -364,7 +364,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   const isBossWave = s.wave % 5 === 0;
   s.isBossWave = isBossWave;
 
-  if (s.time > s.wave * 25) {
+  // Block wave advancement during boss wave until boss is dead
+  const canAdvanceWave = !isBossWave || s.bossWaveCleared;
+
+  if (canAdvanceWave && s.time > s.wave * 25) {
     s.wave++;
     s.spawnInterval = Math.max(0.3, s.spawnInterval * 0.9);
 
@@ -400,6 +403,19 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       }
     }
     s.spawnTimer = 0;
+  }
+
+  // Coin chest spawning
+  s.coinSpawnTimer += dt;
+  const coinInterval = Math.max(8, 20 - s.wave * 0.5); // faster spawns later
+  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 5) {
+    const pos = spawnPos(s, -200);
+    s.coinChests = [...s.coinChests, {
+      id: nextId++, pos,
+      radius: 12,
+      value: 5 + Math.floor(Math.random() * 5) + Math.floor(s.wave / 3),
+    }];
+    s.coinSpawnTimer = 0;
   }
 
   // Boss abilities
