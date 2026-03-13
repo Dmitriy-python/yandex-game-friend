@@ -128,11 +128,13 @@ export type GameEvent =
   | { type: 'shoot' }
   | { type: 'hit' }
   | { type: 'kill' }
+  | { type: 'boss_kill' }
   | { type: 'melee_swing' }
   | { type: 'chest_open' }
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
-  | { type: 'player_hit' };
+  | { type: 'player_hit' }
+  | { type: 'boss_ability' };
 
 export interface UpgradeOption {
   id: string;
