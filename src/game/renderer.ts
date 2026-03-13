@@ -304,12 +304,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   const p = state.player;
   const playerSprite = playerSpriteMap[p.characterClass];
 
-  // Movement animation
-  const pMoving = Math.abs(p.vel.x) > 1 || Math.abs(p.vel.y) > 1;
-  const pBob = pMoving ? Math.sin(state.time * 12) * 4 : 0;
-  const pTilt = pMoving ? Math.sin(state.time * 8) * 0.06 : 0;
-  const pSquash = pMoving ? 1 + Math.sin(state.time * 14) * 0.04 : 1;
-
   // Attack range (subtle)
   ctx.beginPath();
   ctx.arc(p.pos.x, p.pos.y, p.attackRange, 0, Math.PI * 2);
@@ -356,8 +350,13 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // Player sprite with animation
-  drawSprite(ctx, playerSprite, p.pos.x, p.pos.y + pBob, 60, pTilt, false, pSquash);
+  // Player sprite with walking animation
+  drawWalkingEntity(
+    ctx, playerSprite,
+    p.pos.x, p.pos.y, 60,
+    p.vel.x, p.vel.y, state.time, 0,
+    false, 1
+  );
 
   ctx.restore();
 
