@@ -208,17 +208,55 @@ export function stopMusic() {
   musicPlaying = false;
 }
 
+export function playBossKill() {
+  if (!sfxEnabled) return;
+  const ctx = getCtx();
+  // Epic explosion
+  const bufferSize = ctx.sampleRate * 0.4;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 1.5);
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(800, ctx.currentTime);
+  filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.4);
+  noise.connect(filter).connect(gain).connect(ctx.destination);
+  noise.start();
+}
+
+export function playBossAbility() {
+  if (!sfxEnabled) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(120, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.3);
+  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.4);
+}
+
 export function processGameEvents(events: GameEvent[]) {
   for (const e of events) {
     switch (e.type) {
       case 'shoot': playShoot(); break;
       case 'hit': playHit(); break;
       case 'kill': playKill(); break;
+      case 'boss_kill': playBossKill(); break;
       case 'melee_swing': playMeleeSwing(); break;
       case 'chest_open': playChestOpen(); break;
       case 'level_up': playLevelUp(); break;
       case 'boss_spawn': playBossSpawn(); break;
       case 'player_hit': playPlayerHit(); break;
+      case 'boss_ability': playBossAbility(); break;
     }
   }
 }

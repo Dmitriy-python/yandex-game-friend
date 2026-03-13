@@ -47,6 +47,32 @@ export interface Enemy {
   radius: number;
   xpValue: number;
   flashTimer: number;
+  // Boss ability timers
+  abilityTimer?: number;
+  abilityCooldown?: number;
+  isDashing?: boolean;
+  dashTimer?: number;
+  armor?: number; // damage reduction factor 0-1
+}
+
+export interface DeathParticle {
+  id: number;
+  pos: Vec2;
+  vel: Vec2;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
+
+export interface BossProjectile {
+  id: number;
+  pos: Vec2;
+  vel: Vec2;
+  damage: number;
+  radius: number;
+  life: number;
+  color: string;
 }
 
 export interface Projectile {
@@ -80,6 +106,8 @@ export interface GameState {
   projectiles: Projectile[];
   xpOrbs: XpOrb[];
   chests: Chest[];
+  deathParticles: DeathParticle[];
+  bossProjectiles: BossProjectile[];
   time: number;
   score: number;
   wave: number;
@@ -100,11 +128,13 @@ export type GameEvent =
   | { type: 'shoot' }
   | { type: 'hit' }
   | { type: 'kill' }
+  | { type: 'boss_kill' }
   | { type: 'melee_swing' }
   | { type: 'chest_open' }
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
-  | { type: 'player_hit' };
+  | { type: 'player_hit' }
+  | { type: 'boss_ability' };
 
 export interface UpgradeOption {
   id: string;
