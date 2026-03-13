@@ -48,16 +48,93 @@ const playerSpriteMap: Record<CharacterClass, string> = {
   archer: 'playerArcher',
 };
 
-function drawSprite(ctx: CanvasRenderingContext2D, type: string, x: number, y: number, size: number, rotation = 0, flash = false, scaleY = 1) {
+function drawSprite(
+  ctx: CanvasRenderingContext2D, type: string,
+  x: number, y: number, size: number,
+  rotation = 0, flash = false, scaleY = 1, flipX = false
+) {
   const img = images[type];
   if (!img) return;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
-  ctx.scale(1, scaleY);
+  ctx.scale(flipX ? -1 : 1, scaleY);
   if (flash) ctx.filter = 'brightness(2) saturate(0)';
   ctx.drawImage(img, -size / 2, -size / 2, size, size);
   ctx.restore();
+}
+
+// Realistic walking animation: simulates body bob + leg stride
+function drawWalkingEntity(
+  ctx: CanvasRenderingContext2D, sprite: string,
+  x: number, y: number, size: number,
+  dx: number, dy: number, time: number, entityId: number,
+  flash = false, speedFactor = 1
+) {
+  const speed = Math.sqrt(dx * dx + dy * dy);
+  const isMoving = speed > 0.5;
+  const flipX = dx < -0.5;
+
+  // Smooth transition factor (ramps up/down)
+  const moveFactor = isMoving ? Math.min(1, speed / 3) : 0;
+
+  // Walking cycle phase
+  const freq = 10 * speedFactor;
+  const phase = time * freq + entityId * 1.3;
+
+  // Body bob: slight up-down motion simulating weight shift per step
+  const bodyBob = moveFactor * Math.abs(Math.sin(phase)) * 3;
+
+  // Body lean: slight tilt in movement direction
+  const bodyLean = moveFactor * Math.sin(phase) * 0.04;
+
+  // Vertical squash-stretch: compress at bottom of step, stretch at top
+  const squash = 1 + moveFactor * Math.sin(phase * 2) * 0.03;
+  const stretch = 1 - moveFactor * Math.sin(phase * 2) * 0.02;
+
+  // Shadow (compressed ellipse that scales with bob)
+  ctx.save();
+  ctx.translate(x, y + size * 0.35);
+  ctx.scale(1, 0.3);
+  ctx.beginPath();
+  ctx.arc(0, 0, size * 0.3 * (1 - moveFactor * 0.1 * Math.abs(Math.sin(phase))), 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fill();
+  ctx.restore();
+
+  // Draw legs (simple stride lines behind the sprite)
+  if (isMoving) {
+    const legLength = size * 0.2;
+    const strideL = Math.sin(phase) * legLength * moveFactor;
+    const strideR = Math.sin(phase + Math.PI) * legLength * moveFactor;
+    const legY = y + size * 0.22;
+    const legSpacing = size * 0.12;
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(x - legSpacing, legY);
+    ctx.lineTo(x - legSpacing + strideL * 0.5, legY + Math.abs(strideL) * 0.3);
+    ctx.stroke();
+
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(x + legSpacing, legY);
+    ctx.lineTo(x + legSpacing + strideR * 0.5, legY + Math.abs(strideR) * 0.3);
+    ctx.stroke();
+  }
+
+  // Draw main sprite with bob + lean + squash
+  drawSprite(
+    ctx, sprite,
+    x, y - bodyBob,
+    size, bodyLean, flash,
+    squash * stretch,
+    flipX
+  );
 }
 
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canvasW: number, canvasH: number) {
