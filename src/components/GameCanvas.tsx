@@ -4,36 +4,17 @@ import { createInitialState, updateGame } from '@/game/logic';
 import { renderGame } from '@/game/renderer';
 import { processGameEvents, startMusic, stopMusic } from '@/game/audio';
 import { GameState, GameScreen, CharacterClass } from '@/game/types';
+import { SaveData, initYandexSDK, loadSave, saveSaveData, setLeaderboardScore } from '@/game/save';
+import { applyShopUpgrades } from '@/game/shopUpgrades';
 import LoadingScreen from './game/LoadingScreen';
 import MainMenu from './game/MainMenu';
 import PauseMenu from './game/PauseMenu';
 import SettingsMenu from './game/SettingsMenu';
 import CharacterSelect from './game/CharacterSelect';
+import UpgradeShop from './game/UpgradeShop';
 import GameHUD from './game/GameHUD';
 import UpgradeModal from './game/UpgradeModal';
 import GameOverScreen from './game/GameOverScreen';
-
-const HIGH_SCORE_KEY = 'survivor_high_score';
-const HIGH_WAVE_KEY = 'survivor_high_wave';
-
-function loadHighScore(): { score: number; wave: number } {
-  try {
-    return {
-      score: parseInt(localStorage.getItem(HIGH_SCORE_KEY) || '0'),
-      wave: parseInt(localStorage.getItem(HIGH_WAVE_KEY) || '0'),
-    };
-  } catch { return { score: 0, wave: 0 }; }
-}
-
-function saveHighScore(score: number, wave: number) {
-  try {
-    const prev = loadHighScore();
-    if (wave > prev.wave || (wave === prev.wave && score > prev.score)) {
-      localStorage.setItem(HIGH_SCORE_KEY, String(score));
-      localStorage.setItem(HIGH_WAVE_KEY, String(wave));
-    }
-  } catch {}
-}
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -41,13 +22,22 @@ export default function GameCanvas() {
   const keysRef = useRef<Set<string>>(new Set());
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
-  const [highScoreData, setHighScoreData] = useState(loadHighScore);
+  const [saveData, setSaveData] = useState<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {} });
   const [uiState, setUiState] = useState({
     hp: 100, maxHp: 100, xp: 0, xpToNext: 10, level: 1,
     score: 0, wave: 1, time: 0, gameOver: false,
     pendingUpgrade: false, upgradeOptions: [] as GameState['upgradeOptions'],
-    enemyCount: 0, isBossWave: false, isBossReward: false,
+    enemyCount: 0, isBossWave: false, isBossReward: false, coins: 0,
   });
+
+  // Load save data on mount
+  useEffect(() => {
+    (async () => {
+      await initYandexSDK();
+      const data = await loadSave();
+      setSaveData(data);
+    })();
+  }, []);
 
   // Keyboard handling
   useEffect(() => {
@@ -56,14 +46,8 @@ export default function GameCanvas() {
       keysRef.current.add(key);
       if (key === 'escape') {
         setScreen(prev => {
-          if (prev === 'playing') {
-            stateRef.current.paused = true;
-            return 'paused';
-          }
-          if (prev === 'paused') {
-            stateRef.current.paused = false;
-            return 'playing';
-          }
+          if (prev === 'playing') { stateRef.current.paused = true; return 'paused'; }
+          if (prev === 'paused') { stateRef.current.paused = false; return 'playing'; }
           return prev;
         });
       }
@@ -87,6 +71,12 @@ export default function GameCanvas() {
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  // Persist save helper
+  const persistSave = useCallback(async (data: SaveData) => {
+    setSaveData(data);
+    await saveSaveData(data);
+  }, []);
+
   // Game loop
   useGameLoop((dt) => {
     if (screen !== 'playing' && screen !== 'paused') return;
@@ -100,7 +90,6 @@ export default function GameCanvas() {
 
     stateRef.current = updateGame(stateRef.current, dt, { dx, dy });
 
-    // Process audio events
     if (stateRef.current.events.length > 0) {
       processGameEvents(stateRef.current.events);
       stateRef.current.events = [];
@@ -114,10 +103,13 @@ export default function GameCanvas() {
 
     const s = stateRef.current;
 
-    // Check game over - save high score
+    // Game over — save
     if (s.gameOver && screen === 'playing') {
-      saveHighScore(s.score, s.wave);
-      setHighScoreData(loadHighScore());
+      const totalCoins = saveData.coins + s.coins;
+      const newHighScore = s.score > saveData.highScore ? s.score : saveData.highScore;
+      const newHighWave = s.wave > saveData.highWave ? s.wave : saveData.highWave;
+      persistSave({ ...saveData, coins: totalCoins, highScore: newHighScore, highWave: newHighWave });
+      setLeaderboardScore(s.score);
       stopMusic();
     }
 
@@ -131,6 +123,7 @@ export default function GameCanvas() {
       enemyCount: s.enemies.length,
       isBossWave: s.isBossWave && !s.bossWaveCleared,
       isBossReward: s.upgradeOptions.some(o => o.id.startsWith('boss_')),
+      coins: s.coins,
     });
   });
 
@@ -145,10 +138,14 @@ export default function GameCanvas() {
   }, []);
 
   const handleStartGame = useCallback(() => {
-    stateRef.current = createInitialState(selectedClass);
+    const state = createInitialState(selectedClass);
+    // Apply shop upgrades to starting stats
+    applyShopUpgrades(saveData.upgrades, state.player);
+    state.player.hp = state.player.maxHp;
+    stateRef.current = state;
     setScreen('playing');
     startMusic();
-  }, [selectedClass]);
+  }, [selectedClass, saveData.upgrades]);
 
   const handleResume = useCallback(() => {
     stateRef.current.paused = false;
@@ -156,32 +153,43 @@ export default function GameCanvas() {
   }, []);
 
   const handleMainMenu = useCallback(() => {
+    // Save coins earned this session
+    const earnedCoins = stateRef.current.coins;
+    if (earnedCoins > 0) {
+      persistSave({ ...saveData, coins: saveData.coins + earnedCoins });
+    }
     stopMusic();
     stateRef.current = createInitialState();
     setScreen('menu');
-    setHighScoreData(loadHighScore());
-  }, []);
+  }, [saveData, persistSave]);
 
-  // Loading screen
+  const handleBuyUpgrade = useCallback((id: string, cost: number) => {
+    const newUpgrades = { ...saveData.upgrades, [id]: (saveData.upgrades[id] || 0) + 1 };
+    const newData = { ...saveData, coins: saveData.coins - cost, upgrades: newUpgrades };
+    persistSave(newData);
+  }, [saveData, persistSave]);
+
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
   }
 
-  // Main menu
   if (screen === 'menu') {
-    return <MainMenu highScore={highScoreData.score} highWave={highScoreData.wave}
+    return <MainMenu highScore={saveData.highScore} highWave={saveData.highWave} coins={saveData.coins}
       onPlay={handleStartGame} onCharacterSelect={() => setScreen('character_select')}
-      onSettings={() => setScreen('settings')} />;
+      onShop={() => setScreen('shop')} onSettings={() => setScreen('settings')} />;
   }
 
-  // Settings
   if (screen === 'settings') {
     return <SettingsMenu onBack={() => setScreen('menu')} />;
   }
 
-  // Character select
   if (screen === 'character_select') {
     return <CharacterSelect selected={selectedClass} onSelect={setSelectedClass} onBack={() => setScreen('menu')} />;
+  }
+
+  if (screen === 'shop') {
+    return <UpgradeShop coins={saveData.coins} upgrades={saveData.upgrades}
+      onBuy={handleBuyUpgrade} onBack={() => setScreen('menu')} />;
   }
 
   return (
@@ -190,24 +198,20 @@ export default function GameCanvas() {
 
       <GameHUD {...uiState} />
 
-      {/* Controls hint */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
         style={{ color: 'rgba(148,163,184,0.5)' }}>
         WASD / Стрелки • Авто-атака • ESC пауза
       </div>
 
-      {/* Pause */}
       {screen === 'paused' && (
         <PauseMenu onResume={handleResume} onMainMenu={handleMainMenu} />
       )}
 
-      {/* Upgrade modal */}
       {uiState.pendingUpgrade && !uiState.gameOver && (
         <UpgradeModal level={uiState.level} options={uiState.upgradeOptions}
           isBossReward={uiState.isBossReward} onSelect={handleUpgrade} />
       )}
 
-      {/* Game Over */}
       {uiState.gameOver && (
         <GameOverScreen score={uiState.score} level={uiState.level}
           wave={uiState.wave} time={uiState.time}
