@@ -247,13 +247,8 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   for (const e of state.enemies) {
     const config = enemySprites[e.type];
 
-    // Movement animation: bobbing + tilt
     const dx = e.pos.x - e.prevPos.x;
     const dy = e.pos.y - e.prevPos.y;
-    const isMoving = Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1;
-    const bobAmount = isMoving ? Math.sin(state.time * 10 + e.id * 1.7) * 3 : 0;
-    const tilt = isMoving ? Math.sin(state.time * 8 + e.id * 2.3) * 0.08 : 0;
-    const squash = isMoving ? 1 + Math.sin(state.time * 12 + e.id) * 0.05 : 1;
 
     if (e.type === 'boss') {
       ctx.beginPath();
@@ -262,7 +257,13 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
       ctx.fill();
     }
 
-    drawSprite(ctx, config.sprite, e.pos.x, e.pos.y + bobAmount, config.size, tilt, e.flashTimer > 0, squash);
+    const speedFactor = e.type === 'fast' ? 1.6 : e.type === 'tank' ? 0.6 : e.type === 'boss' ? 0.5 : 1;
+    drawWalkingEntity(
+      ctx, config.sprite,
+      e.pos.x, e.pos.y, config.size,
+      dx, dy, state.time, e.id,
+      e.flashTimer > 0, speedFactor
+    );
 
     // HP bar
     if (e.hp < e.maxHp) {
