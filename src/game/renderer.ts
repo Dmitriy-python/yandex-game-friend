@@ -2,6 +2,13 @@ import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass, BossVariant } from '.
 import playerImg from '@/assets/player.png';
 import playerMageImg from '@/assets/player-mage.png';
 import playerArcherImg from '@/assets/player-archer.png';
+import playerKnightImg from '@/assets/player-knight.png';
+import playerRogueImg from '@/assets/player-rogue.png';
+import playerPriestImg from '@/assets/player-priest.png';
+import playerBarbarianImg from '@/assets/player-barbarian.png';
+import playerElfImg from '@/assets/player-elf.png';
+import playerDwarfImg from '@/assets/player-dwarf.png';
+import playerNecromancerImg from '@/assets/player-necromancer.png';
 import enemyNormalImg from '@/assets/enemy-normal.png';
 import enemyFastImg from '@/assets/enemy-fast.png';
 import enemyTankImg from '@/assets/enemy-tank.png';
@@ -25,20 +32,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export async function preloadImages(): Promise<void> {
   if (imagesLoaded) return;
-  const [player, mage, archer, normal, fast, tank, boss, ground] = await Promise.all([
-    loadImage(playerImg), loadImage(playerMageImg), loadImage(playerArcherImg),
-    loadImage(enemyNormalImg), loadImage(enemyFastImg),
-    loadImage(enemyTankImg), loadImage(enemyBossImg),
-    loadImage(groundTileImg),
-  ]);
-  images.player = player;
-  images.playerMage = mage;
-  images.playerArcher = archer;
-  images.enemyNormal = normal;
-  images.enemyFast = fast;
-  images.enemyTank = tank;
-  images.enemyBoss = boss;
-  images.ground = ground;
+  const srcs: Record<string, string> = {
+    player: playerImg, playerMage: playerMageImg, playerArcher: playerArcherImg,
+    playerKnight: playerKnightImg, playerRogue: playerRogueImg, playerPriest: playerPriestImg,
+    playerBarbarian: playerBarbarianImg, playerElf: playerElfImg, playerDwarf: playerDwarfImg,
+    playerNecromancer: playerNecromancerImg,
+    enemyNormal: enemyNormalImg, enemyFast: enemyFastImg,
+    enemyTank: enemyTankImg, enemyBoss: enemyBossImg,
+    ground: groundTileImg,
+  };
+  const entries = Object.entries(srcs);
+  const loaded = await Promise.all(entries.map(([, src]) => loadImage(src)));
+  entries.forEach(([key], i) => { images[key] = loaded[i]; });
   imagesLoaded = true;
 }
 
@@ -46,6 +51,13 @@ const playerSpriteMap: Record<CharacterClass, string> = {
   fighter: 'player',
   mage: 'playerMage',
   archer: 'playerArcher',
+  knight: 'playerKnight',
+  rogue: 'playerRogue',
+  priest: 'playerPriest',
+  barbarian: 'playerBarbarian',
+  elf: 'playerElf',
+  dwarf: 'playerDwarf',
+  necromancer: 'playerNecromancer',
 };
 
 function drawSprite(
