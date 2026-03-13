@@ -1,4 +1,4 @@
-import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass } from './types';
+import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass, BossVariant } from './types';
 import playerImg from '@/assets/player.png';
 import playerMageImg from '@/assets/player-mage.png';
 import playerArcherImg from '@/assets/player-archer.png';
@@ -64,7 +64,6 @@ function drawSprite(
   ctx.restore();
 }
 
-// Realistic walking animation: simulates body bob + leg stride
 function drawWalkingEntity(
   ctx: CanvasRenderingContext2D, sprite: string,
   x: number, y: number, size: number,
@@ -74,25 +73,15 @@ function drawWalkingEntity(
   const speed = Math.sqrt(dx * dx + dy * dy);
   const isMoving = speed > 0.5;
   const flipX = dx < -0.5;
-
-  // Smooth transition factor (ramps up/down)
   const moveFactor = isMoving ? Math.min(1, speed / 3) : 0;
-
-  // Walking cycle phase
   const freq = 10 * speedFactor;
   const phase = time * freq + entityId * 1.3;
-
-  // Body bob: slight up-down motion simulating weight shift per step
   const bodyBob = moveFactor * Math.abs(Math.sin(phase)) * 3;
-
-  // Body lean: slight tilt in movement direction
   const bodyLean = moveFactor * Math.sin(phase) * 0.04;
-
-  // Vertical squash-stretch: compress at bottom of step, stretch at top
   const squash = 1 + moveFactor * Math.sin(phase * 2) * 0.03;
   const stretch = 1 - moveFactor * Math.sin(phase * 2) * 0.02;
 
-  // Shadow (compressed ellipse that scales with bob)
+  // Shadow
   ctx.save();
   ctx.translate(x, y + size * 0.35);
   ctx.scale(1, 0.3);
@@ -102,39 +91,86 @@ function drawWalkingEntity(
   ctx.fill();
   ctx.restore();
 
-  // Draw legs (simple stride lines behind the sprite)
+  // Legs
   if (isMoving) {
     const legLength = size * 0.2;
     const strideL = Math.sin(phase) * legLength * moveFactor;
     const strideR = Math.sin(phase + Math.PI) * legLength * moveFactor;
     const legY = y + size * 0.22;
     const legSpacing = size * 0.12;
-
     ctx.strokeStyle = 'rgba(0,0,0,0.3)';
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-
-    // Left leg
     ctx.beginPath();
     ctx.moveTo(x - legSpacing, legY);
     ctx.lineTo(x - legSpacing + strideL * 0.5, legY + Math.abs(strideL) * 0.3);
     ctx.stroke();
-
-    // Right leg
     ctx.beginPath();
     ctx.moveTo(x + legSpacing, legY);
     ctx.lineTo(x + legSpacing + strideR * 0.5, legY + Math.abs(strideR) * 0.3);
     ctx.stroke();
   }
 
-  // Draw main sprite with bob + lean + squash
-  drawSprite(
-    ctx, sprite,
-    x, y - bodyBob,
-    size, bodyLean, flash,
-    squash * stretch,
-    flipX
-  );
+  drawSprite(ctx, sprite, x, y - bodyBob, size, bodyLean, flash, squash * stretch, flipX);
+}
+
+// Boss aura colors per variant
+const BOSS_AURA: Record<BossVariant, { color: string; glow: string }> = {
+  infernal: { color: 'rgba(255,69,0,', glow: '#ff4500' },
+  frost: { color: 'rgba(0,191,255,', glow: '#00bfff' },
+  shadow: { color: 'rgba(139,0,255,', glow: '#8b00ff' },
+  thunder: { color: 'rgba(255,215,0,', glow: '#ffd700' },
+};
+
+function drawBossAura(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, variant: BossVariant, time: number) {
+  const aura = BOSS_AURA[variant];
+  const pulse = 0.5 + Math.sin(time * 3) * 0.3;
+
+  // Outer glow ring
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 25 + Math.sin(time * 2) * 5, 0, Math.PI * 2);
+  ctx.strokeStyle = aura.color + (0.3 * pulse).toFixed(2) + ')';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = aura.glow;
+  ctx.shadowBlur = 20;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Inner aura fill
+  const grad = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius + 20);
+  grad.addColorStop(0, aura.color + '0.0)');
+  grad.addColorStop(0.6, aura.color + (0.12 * pulse).toFixed(2) + ')');
+  grad.addColorStop(1, aura.color + '0.0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(x, y, radius + 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Orbiting particles
+  for (let i = 0; i < 4; i++) {
+    const angle = time * 2 + (Math.PI * 2 * i) / 4;
+    const orbitR = radius + 18;
+    const px = x + Math.cos(angle) * orbitR;
+    const py = y + Math.sin(angle) * orbitR;
+    ctx.beginPath();
+    ctx.arc(px, py, 3, 0, Math.PI * 2);
+    ctx.fillStyle = aura.glow;
+    ctx.shadowColor = aura.glow;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Armor indicator for thunder boss
+  if (variant === 'thunder') {
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,215,0,' + (0.4 + Math.sin(time * 4) * 0.2).toFixed(2) + ')';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
 
 export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canvasW: number, canvasH: number) {
@@ -171,7 +207,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
         ctx.drawImage(images.ground, tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
       }
     }
-    // Darken edges with vignette overlay
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
   }
@@ -194,6 +229,21 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.strokeStyle = 'rgba(239,68,68,0.6)';
   ctx.lineWidth = 4;
   ctx.strokeRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
+
+  // Death particles
+  for (const p of state.deathParticles) {
+    const alpha = p.life / p.maxLife;
+    const size = p.size * alpha;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.pos.x, p.pos.y, size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
 
   // XP orbs
   for (const orb of state.xpOrbs) {
@@ -236,7 +286,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.restore();
   }
 
-  // Enemies with movement animation
+  // Enemies
   const enemySprites: Record<string, { sprite: string; size: number }> = {
     normal: { sprite: 'enemyNormal', size: 50 },
     fast: { sprite: 'enemyFast', size: 35 },
@@ -246,15 +296,12 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
 
   for (const e of state.enemies) {
     const config = enemySprites[e.type];
-
     const dx = e.pos.x - e.prevPos.x;
     const dy = e.pos.y - e.prevPos.y;
 
-    if (e.type === 'boss') {
-      ctx.beginPath();
-      ctx.arc(e.pos.x, e.pos.y, e.radius + 15, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(220,38,38,0.15)';
-      ctx.fill();
+    // Boss aura with variant-specific visuals
+    if (e.type === 'boss' && e.bossVariant) {
+      drawBossAura(ctx, e.pos.x, e.pos.y, e.radius, e.bossVariant, state.time);
     }
 
     const speedFactor = e.type === 'fast' ? 1.6 : e.type === 'tank' ? 0.6 : e.type === 'boss' ? 0.5 : 1;
@@ -270,7 +317,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
       const barW = e.type === 'boss' ? 80 : e.type === 'tank' ? 60 : 40;
       const barH = e.type === 'boss' ? 8 : 5;
       const barX = e.pos.x - barW / 2;
-      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 25 : 12);
+      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 35 : 12);
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath();
       ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
@@ -280,10 +327,44 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
       ctx.beginPath();
       ctx.roundRect(barX, barY, barW * hpPercent, barH, 2);
       ctx.fill();
+
+      // Boss name label
+      if (e.type === 'boss' && e.bossVariant) {
+        const names: Record<BossVariant, string> = {
+          infernal: '🔥 Инфернал',
+          frost: '❄️ Морозный',
+          shadow: '👁️ Теневой',
+          thunder: '⚡ Громовой',
+        };
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = BOSS_AURA[e.bossVariant].glow;
+        ctx.fillText(names[e.bossVariant], e.pos.x, barY - 6);
+      }
     }
   }
 
-  // Projectiles
+  // Boss projectiles
+  for (const bp of state.bossProjectiles) {
+    ctx.beginPath();
+    ctx.arc(bp.pos.x, bp.pos.y, bp.radius, 0, Math.PI * 2);
+    ctx.fillStyle = bp.color;
+    ctx.shadowColor = bp.color;
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Trail
+    ctx.beginPath();
+    ctx.moveTo(bp.pos.x, bp.pos.y);
+    ctx.lineTo(bp.pos.x - bp.vel.x * 0.04, bp.pos.y - bp.vel.y * 0.04);
+    ctx.strokeStyle = bp.color;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = bp.radius * 1.5;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Player projectiles
   for (const p of state.projectiles) {
     ctx.beginPath();
     ctx.moveTo(p.pos.x, p.pos.y);
@@ -304,7 +385,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   const p = state.player;
   const playerSprite = playerSpriteMap[p.characterClass];
 
-  // Attack range (subtle)
+  // Attack range
   ctx.beginPath();
   ctx.arc(p.pos.x, p.pos.y, p.attackRange, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(59,130,246,0.05)';
@@ -317,7 +398,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     const startAngle = progress * Math.PI * 2 - Math.PI;
     const endAngle = startAngle + Math.PI * 1.2;
     const alpha = p.meleeSwingTimer / p.meleeSwingDuration;
-
     ctx.beginPath();
     ctx.arc(p.pos.x, p.pos.y, p.meleeRange, startAngle, endAngle);
     ctx.strokeStyle = `rgba(251,191,36,${alpha * 0.8})`;
@@ -326,7 +406,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.shadowBlur = 15;
     ctx.stroke();
     ctx.shadowBlur = 0;
-
     ctx.beginPath();
     ctx.moveTo(p.pos.x, p.pos.y);
     ctx.arc(p.pos.x, p.pos.y, p.meleeRange, startAngle, endAngle);
@@ -335,7 +414,7 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.fill();
   }
 
-  // Player glow (class-colored)
+  // Player glow
   const glowColors: Record<CharacterClass, string> = {
     fighter: '#3b82f6',
     mage: '#8b5cf6',
@@ -350,7 +429,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // Player sprite with walking animation
   drawWalkingEntity(
     ctx, playerSprite,
     p.pos.x, p.pos.y, 60,

@@ -1,4 +1,4 @@
-import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
@@ -41,6 +41,7 @@ export function createInitialState(characterClass: CharacterClass = 'fighter'): 
       meleeSwingTimer: 0, meleeSwingDuration: 0.3,
     },
     enemies: [], projectiles: [], xpOrbs: [], chests: [],
+    deathParticles: [], bossProjectiles: [],
     time: 0, score: 0, wave: 1,
     spawnTimer: 0, spawnInterval: 1.5,
     gameOver: false, paused: false,
@@ -76,6 +77,41 @@ function getBossVariantForWave(wave: number): BossVariant {
   return BOSS_VARIANTS[index];
 }
 
+// Death particle colors per enemy type
+const DEATH_COLORS: Record<EnemyType, string[]> = {
+  normal: ['#ef4444', '#f97316', '#fbbf24'],
+  fast: ['#3b82f6', '#60a5fa', '#93c5fd'],
+  tank: ['#6b7280', '#9ca3af', '#d1d5db'],
+  boss: ['#dc2626', '#fbbf24', '#f59e0b', '#ef4444', '#ff6b6b'],
+};
+
+const BOSS_VARIANT_COLORS: Record<BossVariant, string[]> = {
+  infernal: ['#ff4500', '#ff6347', '#ffa500', '#ff0000'],
+  frost: ['#00bfff', '#87ceeb', '#add8e6', '#ffffff'],
+  shadow: ['#4b0082', '#8b00ff', '#9400d3', '#2d1b69'],
+  thunder: ['#ffd700', '#ffff00', '#f0e68c', '#daa520'],
+};
+
+function spawnDeathParticles(pos: Vec2, type: EnemyType, variant?: BossVariant): DeathParticle[] {
+  const colors = type === 'boss' && variant ? BOSS_VARIANT_COLORS[variant] : DEATH_COLORS[type];
+  const count = type === 'boss' ? 20 : type === 'tank' ? 12 : 8;
+  const particles: DeathParticle[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const speed = 80 + Math.random() * 200;
+    const life = 0.3 + Math.random() * 0.3;
+    particles.push({
+      id: nextId++,
+      pos: { x: pos.x + (Math.random() - 0.5) * 10, y: pos.y + (Math.random() - 0.5) * 10 },
+      vel: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+      life, maxLife: life,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: type === 'boss' ? 6 + Math.random() * 6 : 3 + Math.random() * 4,
+    });
+  }
+  return particles;
+}
+
 function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossVariant): Enemy {
   const wm = 1 + (state.wave - 1) * 0.15;
 
@@ -86,7 +122,7 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     else if (state.wave >= 4 && roll < 0.35) type = 'tank';
   }
 
-  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant'>> = {
+  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant' | 'abilityTimer' | 'abilityCooldown' | 'isDashing' | 'dashTimer' | 'armor'>> = {
     normal: {
       hp: 30 * wm, maxHp: 30 * wm,
       speed: 60 + Math.random() * 40 + state.wave * 3,
@@ -106,19 +142,58 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
       xpValue: 3 + Math.floor(state.wave / 2),
     },
     boss: {
-      hp: 500 * wm, maxHp: 500 * wm,
-      speed: 45 + state.wave,
-      damage: 30 + state.wave * 4, radius: 36,
+      // Bosses are now 3x stronger
+      hp: 1500 * wm, maxHp: 1500 * wm,
+      speed: 65 + state.wave * 2,
+      damage: 50 + state.wave * 5, radius: 36,
       xpValue: 20 + state.wave * 2,
     },
   };
 
   const cfg = configs[type];
   const pos = spawnPos(state, type === 'boss' ? 200 : 0);
+  const variant = type === 'boss' ? (bossVariant || getBossVariantForWave(state.wave)) : undefined;
+
+  // Boss variant-specific stat modifications
+  let armor = 0;
+  let speed = cfg.speed;
+  let hp = cfg.hp;
+  let maxHp = cfg.maxHp;
+
+  if (type === 'boss' && variant) {
+    switch (variant) {
+      case 'infernal':
+        // Ground slam boss — high damage, moderate speed
+        break;
+      case 'frost':
+        // Dash boss — very fast
+        speed *= 1.3;
+        break;
+      case 'shadow':
+        // Projectile/summon boss — moderate
+        hp *= 0.8;
+        maxHp *= 0.8;
+        break;
+      case 'thunder':
+        // Tank boss — slow but huge HP and armor
+        speed *= 0.6;
+        hp *= 1.8;
+        maxHp *= 1.8;
+        armor = 0.4; // 40% damage reduction
+        break;
+    }
+  }
+
   return {
     id: nextId++, type, pos, prevPos: { ...pos },
-    ...cfg, flashTimer: 0,
-    bossVariant: type === 'boss' ? (bossVariant || getBossVariantForWave(state.wave)) : undefined,
+    hp, maxHp, speed, damage: cfg.damage, radius: cfg.radius,
+    xpValue: cfg.xpValue, flashTimer: 0,
+    bossVariant: variant,
+    abilityTimer: type === 'boss' ? 2 + Math.random() * 2 : undefined,
+    abilityCooldown: type === 'boss' ? 4 : undefined,
+    isDashing: false,
+    dashTimer: 0,
+    armor: armor > 0 ? armor : undefined,
   };
 }
 
@@ -133,6 +208,139 @@ function findClosestEnemy(state: GameState): Enemy | null {
     }
   }
   return closest;
+}
+
+// Apply damage to enemy with armor consideration
+function applyDamage(enemy: Enemy, damage: number): number {
+  const actualDamage = enemy.armor ? damage * (1 - enemy.armor) : damage;
+  enemy.hp -= actualDamage;
+  enemy.flashTimer = 0.1;
+  return actualDamage;
+}
+
+// Boss ability updates
+function updateBossAbilities(s: GameState, dt: number): void {
+  for (const e of s.enemies) {
+    if (e.type !== 'boss' || !e.bossVariant) continue;
+
+    // Update dash
+    if (e.isDashing && e.dashTimer !== undefined && e.dashTimer > 0) {
+      e.dashTimer -= dt;
+      if (e.dashTimer <= 0) {
+        e.isDashing = false;
+        e.speed /= 3; // Restore speed after dash
+      }
+    }
+
+    // Ability cooldown
+    if (e.abilityTimer !== undefined) {
+      e.abilityTimer -= dt;
+      if (e.abilityTimer <= 0) {
+        e.abilityTimer = e.abilityCooldown || 4;
+
+        switch (e.bossVariant) {
+          case 'infernal': {
+            // Ground slam — AoE damage around boss
+            const slamRange = 120;
+            const d = dist(e.pos, s.player.pos);
+            if (d < slamRange) {
+              s.player.hp -= e.damage * 0.8;
+              s.events.push({ type: 'player_hit' });
+            }
+            s.events.push({ type: 'boss_ability' });
+            // Spawn slam visual particles
+            for (let i = 0; i < 12; i++) {
+              const angle = (Math.PI * 2 * i) / 12;
+              s.deathParticles.push({
+                id: nextId++,
+                pos: { ...e.pos },
+                vel: { x: Math.cos(angle) * 200, y: Math.sin(angle) * 200 },
+                life: 0.4, maxLife: 0.4,
+                color: '#ff4500', size: 5,
+              });
+            }
+            break;
+          }
+          case 'frost': {
+            // Dash toward player
+            if (!e.isDashing) {
+              e.isDashing = true;
+              e.dashTimer = 0.5;
+              e.speed *= 3;
+              s.events.push({ type: 'boss_ability' });
+            }
+            break;
+          }
+          case 'shadow': {
+            // Shoot projectiles at player
+            const dir = normalize({
+              x: s.player.pos.x - e.pos.x,
+              y: s.player.pos.y - e.pos.y,
+            });
+            const projSpeed = 300;
+            // Shoot 3 spread projectiles
+            for (let i = -1; i <= 1; i++) {
+              const spread = i * 0.3;
+              const px = dir.x * Math.cos(spread) - dir.y * Math.sin(spread);
+              const py = dir.x * Math.sin(spread) + dir.y * Math.cos(spread);
+              s.bossProjectiles.push({
+                id: nextId++,
+                pos: { ...e.pos },
+                vel: { x: px * projSpeed, y: py * projSpeed },
+                damage: e.damage * 0.5,
+                radius: 8,
+                life: 3,
+                color: '#8b00ff',
+              });
+            }
+            s.events.push({ type: 'boss_ability' });
+
+            // Summon 2 minions
+            if (Math.random() < 0.4) {
+              for (let i = 0; i < 2; i++) {
+                const minionPos = {
+                  x: e.pos.x + (Math.random() - 0.5) * 80,
+                  y: e.pos.y + (Math.random() - 0.5) * 80,
+                };
+                s.enemies.push({
+                  id: nextId++, type: 'fast',
+                  pos: minionPos, prevPos: { ...minionPos },
+                  hp: 20, maxHp: 20,
+                  speed: 100 + Math.random() * 50,
+                  damage: 8, radius: 8,
+                  xpValue: 1, flashTimer: 0,
+                });
+              }
+            }
+            break;
+          }
+          case 'thunder': {
+            // Thunder boss doesn't use active abilities — just tanks with armor
+            // But periodically releases a shockwave
+            const shockRange = 150;
+            const d = dist(e.pos, s.player.pos);
+            if (d < shockRange) {
+              s.player.hp -= e.damage * 0.4;
+              s.events.push({ type: 'player_hit' });
+            }
+            // Shockwave particles
+            for (let i = 0; i < 16; i++) {
+              const angle = (Math.PI * 2 * i) / 16;
+              s.deathParticles.push({
+                id: nextId++,
+                pos: { ...e.pos },
+                vel: { x: Math.cos(angle) * 150, y: Math.sin(angle) * 150 },
+                life: 0.3, maxLife: 0.3,
+                color: '#ffd700', size: 4,
+              });
+            }
+            s.events.push({ type: 'boss_ability' });
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 export function updateGame(state: GameState, dt: number, input: { dx: number; dy: number }): GameState {
@@ -160,13 +368,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     s.wave++;
     s.spawnInterval = Math.max(0.3, s.spawnInterval * 0.9);
 
-    // Check if entering a boss wave
     if (s.wave % 5 === 0) {
       s.isBossWave = true;
       s.bossWaveCleared = false;
-      // Clear normal enemies for boss wave
       s.enemies = [];
-      // Spawn bosses
       const bossCount = Math.min(1 + Math.floor(s.wave / 15), 3);
       const variant = getBossVariantForWave(s.wave);
       for (let i = 0; i < bossCount; i++) {
@@ -180,7 +385,6 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   s.spawnTimer += dt;
   if (s.spawnTimer >= s.spawnInterval) {
     if (isBossWave) {
-      // During boss wave, only check if bosses are alive
       const bossesAlive = s.enemies.filter(e => e.type === 'boss').length;
       if (bossesAlive === 0 && !s.bossWaveCleared) {
         s.bossWaveCleared = true;
@@ -197,6 +401,28 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     }
     s.spawnTimer = 0;
   }
+
+  // Boss abilities
+  updateBossAbilities(s, dt);
+
+  // Update boss projectiles
+  s.bossProjectiles = s.bossProjectiles
+    .map(p => ({
+      ...p,
+      pos: { x: p.pos.x + p.vel.x * dt, y: p.pos.y + p.vel.y * dt },
+      life: p.life - dt,
+    }))
+    .filter(p => p.life > 0);
+
+  // Boss projectile-player collisions
+  for (const bp of s.bossProjectiles) {
+    if (dist(bp.pos, s.player.pos) < bp.radius + s.player.radius) {
+      s.player.hp -= bp.damage;
+      bp.life = 0;
+      s.events.push({ type: 'player_hit' });
+    }
+  }
+  s.bossProjectiles = s.bossProjectiles.filter(p => p.life > 0);
 
   // Auto-attack (ranged)
   s.player.attackTimer -= dt;
@@ -224,7 +450,6 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   s.player.meleeSwingTimer = Math.max(0, s.player.meleeSwingTimer - dt);
 
   if (s.player.meleeTimer <= 0) {
-    // Check for enemies in melee range
     const meleeTargets = s.enemies.filter(e =>
       dist(e.pos, s.player.pos) < s.player.meleeRange + e.radius
     );
@@ -233,7 +458,8 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       s.player.meleeSwingTimer = s.player.meleeSwingDuration;
       s.enemies = s.enemies.map(e => {
         if (dist(e.pos, s.player.pos) < s.player.meleeRange + e.radius) {
-          return { ...e, hp: e.hp - s.player.meleeDamage, flashTimer: 0.1 };
+          const dmg = e.armor ? s.player.meleeDamage * (1 - e.armor) : s.player.meleeDamage;
+          return { ...e, hp: e.hp - dmg, flashTimer: 0.1 };
         }
         return e;
       });
@@ -256,13 +482,24 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       x: s.player.pos.x - e.pos.x,
       y: s.player.pos.y - e.pos.y,
     });
+    const currentSpeed = e.isDashing ? e.speed : e.speed;
     return {
       ...e,
       prevPos: { ...e.pos },
-      pos: { x: e.pos.x + dir.x * e.speed * dt, y: e.pos.y + dir.y * e.speed * dt },
+      pos: { x: e.pos.x + dir.x * currentSpeed * dt, y: e.pos.y + dir.y * currentSpeed * dt },
       flashTimer: Math.max(0, e.flashTimer - dt),
     };
   });
+
+  // Update death particles
+  s.deathParticles = s.deathParticles
+    .map(p => ({
+      ...p,
+      pos: { x: p.pos.x + p.vel.x * dt, y: p.pos.y + p.vel.y * dt },
+      vel: { x: p.vel.x * 0.95, y: p.vel.y * 0.95 + 100 * dt }, // gravity
+      life: p.life - dt,
+    }))
+    .filter(p => p.life > 0);
 
   // Projectile-enemy collisions
   const deadEnemyIds = new Set<number>();
@@ -273,19 +510,18 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     for (const e of s.enemies) {
       if (deadEnemyIds.has(e.id) || deadProjIds.has(p.id)) continue;
       if (dist(p.pos, e.pos) < p.radius + e.radius) {
-        e.hp -= p.damage;
-        e.flashTimer = 0.1;
+        applyDamage(e, p.damage);
         deadProjIds.add(p.id);
         s.events.push({ type: 'hit' });
         if (e.hp <= 0) {
           deadEnemyIds.add(e.id);
           s.score += e.type === 'boss' ? 100 : 10;
-          s.events.push({ type: 'kill' });
+          s.events.push({ type: e.type === 'boss' ? 'boss_kill' : 'kill' });
+          s.deathParticles.push(...spawnDeathParticles(e.pos, e.type, e.bossVariant));
           newOrbs.push({
             id: nextId++, pos: { ...e.pos },
             value: e.xpValue, radius: 6,
           });
-          // Boss drops chest
           if (e.type === 'boss') {
             s.chests = [...s.chests, {
               id: nextId++, pos: { ...e.pos },
@@ -298,12 +534,13 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     }
   }
 
-  // Check melee kills from previous melee damage
+  // Check melee kills
   for (const e of s.enemies) {
     if (e.hp <= 0 && !deadEnemyIds.has(e.id)) {
       deadEnemyIds.add(e.id);
       s.score += e.type === 'boss' ? 100 : 10;
-      s.events.push({ type: 'kill' });
+      s.events.push({ type: e.type === 'boss' ? 'boss_kill' : 'kill' });
+      s.deathParticles.push(...spawnDeathParticles(e.pos, e.type, e.bossVariant));
       newOrbs.push({
         id: nextId++, pos: { ...e.pos },
         value: e.xpValue, radius: 6,
@@ -380,4 +617,3 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   return s;
 }
-
