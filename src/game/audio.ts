@@ -244,6 +244,21 @@ export function playBossAbility() {
   osc.stop(ctx.currentTime + 0.4);
 }
 
+export function playCoinCollect() {
+  if (!sfxEnabled) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1800, ctx.currentTime + 0.08);
+  gain.gain.setValueAtTime(0.08, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.12);
+}
+
 export function processGameEvents(events: GameEvent[]) {
   for (const e of events) {
     switch (e.type) {
@@ -253,6 +268,7 @@ export function processGameEvents(events: GameEvent[]) {
       case 'boss_kill': playBossKill(); break;
       case 'melee_swing': playMeleeSwing(); break;
       case 'chest_open': playChestOpen(); break;
+      case 'coin_collect': playCoinCollect(); break;
       case 'level_up': playLevelUp(); break;
       case 'boss_spawn': playBossSpawn(); break;
       case 'player_hit': playPlayerHit(); break;

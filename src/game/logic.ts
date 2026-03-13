@@ -1,4 +1,4 @@
-import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
@@ -41,9 +41,9 @@ export function createInitialState(characterClass: CharacterClass = 'fighter'): 
       meleeSwingTimer: 0, meleeSwingDuration: 0.3,
     },
     enemies: [], projectiles: [], xpOrbs: [], chests: [],
-    deathParticles: [], bossProjectiles: [],
-    time: 0, score: 0, wave: 1,
-    spawnTimer: 0, spawnInterval: 1.5,
+    coinChests: [], deathParticles: [], bossProjectiles: [],
+    time: 0, score: 0, wave: 1, coins: 0,
+    spawnTimer: 0, spawnInterval: 1.5, coinSpawnTimer: 0,
     gameOver: false, paused: false,
     pendingUpgrade: false, upgradeOptions: [],
     camera: { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 },
@@ -364,7 +364,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   const isBossWave = s.wave % 5 === 0;
   s.isBossWave = isBossWave;
 
-  if (s.time > s.wave * 25) {
+  // Block wave advancement during boss wave until boss is dead
+  const canAdvanceWave = !isBossWave || s.bossWaveCleared;
+
+  if (canAdvanceWave && s.time > s.wave * 25) {
     s.wave++;
     s.spawnInterval = Math.max(0.3, s.spawnInterval * 0.9);
 
@@ -400,6 +403,19 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       }
     }
     s.spawnTimer = 0;
+  }
+
+  // Coin chest spawning
+  s.coinSpawnTimer += dt;
+  const coinInterval = Math.max(8, 20 - s.wave * 0.5); // faster spawns later
+  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 5) {
+    const pos = spawnPos(s, -200);
+    s.coinChests = [...s.coinChests, {
+      id: nextId++, pos,
+      radius: 12,
+      value: 5 + Math.floor(Math.random() * 5) + Math.floor(s.wave / 3),
+    }];
+    s.coinSpawnTimer = 0;
   }
 
   // Boss abilities
@@ -586,6 +602,17 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     }
   }
   s.chests = s.chests.filter(c => !c.collected);
+
+  // Coin chest collection
+  const collectedCoins = new Set<number>();
+  for (const cc of s.coinChests) {
+    if (dist(cc.pos, s.player.pos) < s.player.radius + cc.radius) {
+      s.coins += cc.value;
+      collectedCoins.add(cc.id);
+      s.events.push({ type: 'coin_collect' });
+    }
+  }
+  s.coinChests = s.coinChests.filter(c => !collectedCoins.has(c.id));
 
   // XP orb collection
   const collectedOrbs = new Set<number>();

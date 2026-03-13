@@ -98,7 +98,14 @@ export interface Chest {
   collected: boolean;
 }
 
-export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'playing' | 'paused' | 'game_over';
+export interface CoinChest {
+  id: number;
+  pos: Vec2;
+  radius: number;
+  value: number;
+}
+
+export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'shop' | 'playing' | 'paused' | 'game_over';
 
 export interface GameState {
   player: Player;
@@ -106,13 +113,16 @@ export interface GameState {
   projectiles: Projectile[];
   xpOrbs: XpOrb[];
   chests: Chest[];
+  coinChests: CoinChest[];
   deathParticles: DeathParticle[];
   bossProjectiles: BossProjectile[];
   time: number;
   score: number;
   wave: number;
+  coins: number;
   spawnTimer: number;
   spawnInterval: number;
+  coinSpawnTimer: number;
   gameOver: boolean;
   paused: boolean;
   pendingUpgrade: boolean;
@@ -131,6 +141,7 @@ export type GameEvent =
   | { type: 'boss_kill' }
   | { type: 'melee_swing' }
   | { type: 'chest_open' }
+  | { type: 'coin_collect' }
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
   | { type: 'player_hit' }
