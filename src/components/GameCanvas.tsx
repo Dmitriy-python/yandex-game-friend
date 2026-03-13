@@ -169,6 +169,17 @@ export default function GameCanvas() {
     persistSave(newData);
   }, [saveData, persistSave]);
 
+  const handleUnlockCharacter = useCallback((charId: string, cost: number) => {
+    if (saveData.coins < cost || saveData.unlockedCharacters.includes(charId)) return;
+    const newData = {
+      ...saveData,
+      coins: saveData.coins - cost,
+      unlockedCharacters: [...saveData.unlockedCharacters, charId],
+    };
+    persistSave(newData);
+    setSelectedClass(charId as CharacterClass);
+  }, [saveData, persistSave]);
+
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
   }
@@ -184,7 +195,9 @@ export default function GameCanvas() {
   }
 
   if (screen === 'character_select') {
-    return <CharacterSelect selected={selectedClass} onSelect={setSelectedClass} onBack={() => setScreen('menu')} />;
+    return <CharacterSelect selected={selectedClass} onSelect={setSelectedClass}
+      onUnlock={handleUnlockCharacter} unlockedCharacters={saveData.unlockedCharacters}
+      coins={saveData.coins} onBack={() => setScreen('menu')} />;
   }
 
   if (screen === 'shop') {
