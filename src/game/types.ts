@@ -113,13 +113,16 @@ export interface GameState {
   projectiles: Projectile[];
   xpOrbs: XpOrb[];
   chests: Chest[];
+  coinChests: CoinChest[];
   deathParticles: DeathParticle[];
   bossProjectiles: BossProjectile[];
   time: number;
   score: number;
   wave: number;
+  coins: number;
   spawnTimer: number;
   spawnInterval: number;
+  coinSpawnTimer: number;
   gameOver: boolean;
   paused: boolean;
   pendingUpgrade: boolean;
