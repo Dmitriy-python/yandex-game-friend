@@ -98,6 +98,13 @@ export interface Chest {
   collected: boolean;
 }
 
+export interface CoinChest {
+  id: number;
+  pos: Vec2;
+  radius: number;
+  value: number;
+}
+
 export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'playing' | 'paused' | 'game_over';
 
 export interface GameState {
