@@ -22,7 +22,7 @@ export default function GameCanvas() {
   const keysRef = useRef<Set<string>>(new Set());
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
-  const [saveData, setSaveData] = useState<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {} });
+  const [saveData, setSaveData] = useState<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {}, unlockedCharacters: ['fighter'] });
   const [uiState, setUiState] = useState({
     hp: 100, maxHp: 100, xp: 0, xpToNext: 10, level: 1,
     score: 0, wave: 1, time: 0, gameOver: false,
