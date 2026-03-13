@@ -462,6 +462,13 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     fighter: '#3b82f6',
     mage: '#8b5cf6',
     archer: '#22c55e',
+    knight: '#94a3b8',
+    rogue: '#f43f5e',
+    priest: '#fbbf24',
+    barbarian: '#f97316',
+    elf: '#10b981',
+    dwarf: '#a78bfa',
+    necromancer: '#7c3aed',
   };
   const glowColor = glowColors[p.characterClass];
   ctx.beginPath();
