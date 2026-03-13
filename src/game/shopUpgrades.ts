@@ -12,27 +12,27 @@ export const SHOP_UPGRADES: ShopUpgrade[] = [
   {
     id: 'shop_dmg', name: 'Сила атаки', icon: '⚔️',
     description: 'Увеличивает урон на 10% за уровень',
-    maxLevel: 10, baseCost: 50, costMultiplier: 1.5,
+    maxLevel: 10, baseCost: 500, costMultiplier: 1.8,
   },
   {
     id: 'shop_hp', name: 'Здоровье', icon: '❤️',
     description: 'Увеличивает макс. HP на 15 за уровень',
-    maxLevel: 10, baseCost: 40, costMultiplier: 1.4,
+    maxLevel: 10, baseCost: 400, costMultiplier: 1.7,
   },
   {
     id: 'shop_speed', name: 'Скорость', icon: '👟',
     description: 'Увеличивает скорость на 5% за уровень',
-    maxLevel: 8, baseCost: 60, costMultiplier: 1.5,
+    maxLevel: 8, baseCost: 600, costMultiplier: 1.8,
   },
   {
     id: 'shop_atkspd', name: 'Скорострельность', icon: '🔫',
     description: 'Увеличивает скорость атаки на 8% за уровень',
-    maxLevel: 8, baseCost: 70, costMultiplier: 1.6,
+    maxLevel: 8, baseCost: 700, costMultiplier: 1.9,
   },
   {
     id: 'shop_melee', name: 'Ближний бой', icon: '🗡️',
     description: 'Увеличивает урон ближнего боя на 12% за уровень',
-    maxLevel: 8, baseCost: 55, costMultiplier: 1.5,
+    maxLevel: 8, baseCost: 550, costMultiplier: 1.8,
   },
 ];
 

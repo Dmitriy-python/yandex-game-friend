@@ -5,6 +5,7 @@ export interface SaveData {
   highWave: number;
   coins: number;
   upgrades: Record<string, number>; // upgrade id -> level
+  unlockedCharacters: string[]; // character class ids that have been purchased
 }
 
 const DEFAULT_SAVE: SaveData = {
@@ -12,6 +13,7 @@ const DEFAULT_SAVE: SaveData = {
   highWave: 0,
   coins: 0,
   upgrades: {},
+  unlockedCharacters: ['fighter'], // fighter is free
 };
 
 const LOCAL_KEY = 'survivor_save';

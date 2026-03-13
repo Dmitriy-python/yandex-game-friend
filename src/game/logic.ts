@@ -440,15 +440,15 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     s.spawnTimer = 0;
   }
 
-  // Coin chest spawning
+  // Coin chest spawning (rare, low value)
   s.coinSpawnTimer += dt;
-  const coinInterval = Math.max(8, 20 - s.wave * 0.5); // faster spawns later
-  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 5) {
+  const coinInterval = Math.max(20, 35 - s.wave * 0.3);
+  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 3) {
     const pos = spawnPos(s, -200);
     s.coinChests = [...s.coinChests, {
       id: nextId++, pos,
       radius: 12,
-      value: 5 + Math.floor(Math.random() * 5) + Math.floor(s.wave / 3),
+      value: 3 + Math.floor(Math.random() * 4) + Math.floor(s.wave / 5),
     }];
     s.coinSpawnTimer = 0;
   }
