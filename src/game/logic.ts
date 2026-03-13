@@ -184,13 +184,6 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       const bossesAlive = s.enemies.filter(e => e.type === 'boss').length;
       if (bossesAlive === 0 && !s.bossWaveCleared) {
         s.bossWaveCleared = true;
-        // Drop chest at center of where bosses died
-        s.chests = [...s.chests, {
-          id: nextId++,
-          pos: { ...s.player.pos },
-          radius: 18,
-          collected: false,
-        }];
       }
     } else {
       const maxEnemies = 30 + s.wave * 8;
