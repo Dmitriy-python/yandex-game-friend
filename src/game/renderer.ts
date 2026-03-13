@@ -286,6 +286,37 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.restore();
   }
 
+  // Coin chests
+  for (const cc of state.coinChests) {
+    const bob = Math.sin(state.time * 4 + cc.id) * 2;
+    ctx.save();
+    ctx.translate(cc.pos.x, cc.pos.y + bob);
+    // Glow
+    ctx.beginPath();
+    ctx.arc(0, 0, cc.radius + 6, 0, Math.PI * 2);
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(251,191,36,0.15)';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Coin shape
+    ctx.beginPath();
+    ctx.arc(0, 0, cc.radius * 0.7, 0, Math.PI * 2);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, cc.radius * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fill();
+    // $ symbol
+    ctx.fillStyle = '#92400e';
+    ctx.font = `bold ${cc.radius * 0.8}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 0, 1);
+    ctx.restore();
+  }
+
   // Enemies
   const enemySprites: Record<string, { sprite: string; size: number }> = {
     normal: { sprite: 'enemyNormal', size: 50 },

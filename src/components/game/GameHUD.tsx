@@ -5,10 +5,11 @@ interface GameHUDProps {
   wave: number; time: number;
   enemyCount: number;
   isBossWave: boolean;
+  coins: number;
 }
 
 export default function GameHUD(props: GameHUDProps) {
-  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave } = props;
+  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave, coins } = props;
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
@@ -51,9 +52,10 @@ export default function GameHUD(props: GameHUDProps) {
         </span>
       </div>
 
-      {/* Right - Score & Enemies */}
+      {/* Right - Score, Coins & Enemies */}
       <div className="flex flex-col items-end gap-1">
         <span className="text-sm font-bold font-mono" style={{ color: '#fbbf24' }}>💀 {score}</span>
+        <span className="text-sm font-bold font-mono" style={{ color: '#f59e0b' }}>🪙 {coins}</span>
         <span className="text-xs" style={{ color: '#94a3b8' }}>👾 {enemyCount}</span>
       </div>
     </div>
