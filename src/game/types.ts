@@ -1,4 +1,4 @@
-export type CharacterClass = 'fighter' | 'mage' | 'archer';
+export type CharacterClass = 'fighter' | 'mage' | 'archer' | 'knight' | 'rogue' | 'priest' | 'barbarian' | 'elf' | 'dwarf' | 'necromancer';
 
 export interface Vec2 {
   x: number;

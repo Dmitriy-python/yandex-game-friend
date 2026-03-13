@@ -21,6 +21,41 @@ const CLASS_STATS: Record<CharacterClass, Partial<GameState['player']>> = {
     projectileSpeed: 550, speed: 230, maxHp: 80,
     meleeDamage: 20, meleeRange: 45, meleeCooldown: 1.0,
   },
+  knight: {
+    attackDamage: 22, attackCooldown: 0.55, attackRange: 280,
+    projectileSpeed: 380, speed: 180, maxHp: 120,
+    meleeDamage: 30, meleeRange: 55, meleeCooldown: 0.85,
+  },
+  rogue: {
+    attackDamage: 25, attackCooldown: 0.25, attackRange: 250,
+    projectileSpeed: 500, speed: 250, maxHp: 70,
+    meleeDamage: 40, meleeRange: 50, meleeCooldown: 0.6,
+  },
+  priest: {
+    attackDamage: 15, attackCooldown: 0.6, attackRange: 350,
+    projectileSpeed: 300, speed: 190, maxHp: 90,
+    meleeDamage: 10, meleeRange: 35, meleeCooldown: 1.0,
+  },
+  barbarian: {
+    attackDamage: 28, attackCooldown: 0.6, attackRange: 200,
+    projectileSpeed: 350, speed: 210, maxHp: 130,
+    meleeDamage: 50, meleeRange: 70, meleeCooldown: 0.7,
+  },
+  elf: {
+    attackDamage: 20, attackCooldown: 0.28, attackRange: 480,
+    projectileSpeed: 600, speed: 240, maxHp: 75,
+    meleeDamage: 18, meleeRange: 45, meleeCooldown: 1.0,
+  },
+  dwarf: {
+    attackDamage: 24, attackCooldown: 0.5, attackRange: 250,
+    projectileSpeed: 350, speed: 170, maxHp: 140,
+    meleeDamage: 45, meleeRange: 55, meleeCooldown: 0.75,
+  },
+  necromancer: {
+    attackDamage: 32, attackCooldown: 0.8, attackRange: 420,
+    projectileSpeed: 320, speed: 160, maxHp: 65,
+    meleeDamage: 12, meleeRange: 35, meleeCooldown: 1.3,
+  },
 };
 
 export function createInitialState(characterClass: CharacterClass = 'fighter'): GameState {
@@ -405,15 +440,15 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     s.spawnTimer = 0;
   }
 
-  // Coin chest spawning
+  // Coin chest spawning (rare, low value)
   s.coinSpawnTimer += dt;
-  const coinInterval = Math.max(8, 20 - s.wave * 0.5); // faster spawns later
-  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 5) {
+  const coinInterval = Math.max(20, 35 - s.wave * 0.3);
+  if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 3) {
     const pos = spawnPos(s, -200);
     s.coinChests = [...s.coinChests, {
       id: nextId++, pos,
       radius: 12,
-      value: 5 + Math.floor(Math.random() * 5) + Math.floor(s.wave / 3),
+      value: 3 + Math.floor(Math.random() * 4) + Math.floor(s.wave / 5),
     }];
     s.coinSpawnTimer = 0;
   }
