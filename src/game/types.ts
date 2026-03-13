@@ -141,6 +141,7 @@ export type GameEvent =
   | { type: 'boss_kill' }
   | { type: 'melee_swing' }
   | { type: 'chest_open' }
+  | { type: 'coin_collect' }
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
   | { type: 'player_hit' }
