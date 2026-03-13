@@ -106,6 +106,8 @@ export interface GameState {
   projectiles: Projectile[];
   xpOrbs: XpOrb[];
   chests: Chest[];
+  deathParticles: DeathParticle[];
+  bossProjectiles: BossProjectile[];
   time: number;
   score: number;
   wave: number;
