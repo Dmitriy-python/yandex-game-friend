@@ -603,6 +603,17 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   }
   s.chests = s.chests.filter(c => !c.collected);
 
+  // Coin chest collection
+  const collectedCoins = new Set<number>();
+  for (const cc of s.coinChests) {
+    if (dist(cc.pos, s.player.pos) < s.player.radius + cc.radius) {
+      s.coins += cc.value;
+      collectedCoins.add(cc.id);
+      s.events.push({ type: 'coin_collect' });
+    }
+  }
+  s.coinChests = s.coinChests.filter(c => !collectedCoins.has(c.id));
+
   // XP orb collection
   const collectedOrbs = new Set<number>();
   for (const orb of s.xpOrbs) {
