@@ -105,7 +105,7 @@ export interface CoinChest {
   value: number;
 }
 
-export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'playing' | 'paused' | 'game_over';
+export type GameScreen = 'loading' | 'menu' | 'character_select' | 'settings' | 'shop' | 'playing' | 'paused' | 'game_over';
 
 export interface GameState {
   player: Player;
