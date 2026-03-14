@@ -460,20 +460,74 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.globalAlpha = 1;
   }
 
-  // Player projectiles
-  for (const p of state.projectiles) {
+  // Player projectiles — class-specific visuals
+  const projStyles: Record<CharacterClass, { color: string; glow: string; trail: string; size: number }> = {
+    fighter: { color: '#94a3b8', glow: '#64748b', trail: 'rgba(148,163,184,0.4)', size: 4 },
+    mage: { color: '#ff6b35', glow: '#ff4500', trail: 'rgba(255,107,53,0.5)', size: 7 },
+    archer: { color: '#22c55e', glow: '#16a34a', trail: 'rgba(34,197,94,0.3)', size: 3 },
+    knight: { color: '#e2e8f0', glow: '#94a3b8', trail: 'rgba(226,232,240,0.4)', size: 5 },
+    rogue: { color: '#f43f5e', glow: '#e11d48', trail: 'rgba(244,63,94,0.3)', size: 3 },
+    priest: { color: '#fbbf24', glow: '#f59e0b', trail: 'rgba(251,191,36,0.4)', size: 6 },
+    barbarian: { color: '#f97316', glow: '#ea580c', trail: 'rgba(249,115,22,0.4)', size: 5 },
+    elf: { color: '#34d399', glow: '#10b981', trail: 'rgba(52,211,153,0.3)', size: 3 },
+    dwarf: { color: '#a78bfa', glow: '#7c3aed', trail: 'rgba(167,139,250,0.4)', size: 6 },
+    necromancer: { color: '#a855f7', glow: '#7c3aed', trail: 'rgba(168,85,247,0.5)', size: 6 },
+  };
+  const pStyle = projStyles[state.player.characterClass];
+
+  for (const proj of state.projectiles) {
+    // Trail
     ctx.beginPath();
-    ctx.moveTo(p.pos.x, p.pos.y);
-    ctx.lineTo(p.pos.x - p.vel.x * 0.03, p.pos.y - p.vel.y * 0.03);
-    ctx.strokeStyle = 'rgba(250,204,21,0.4)';
-    ctx.lineWidth = 4;
+    ctx.moveTo(proj.pos.x, proj.pos.y);
+    ctx.lineTo(proj.pos.x - proj.vel.x * 0.04, proj.pos.y - proj.vel.y * 0.04);
+    ctx.strokeStyle = pStyle.trail;
+    ctx.lineWidth = pStyle.size * 0.8;
+    ctx.lineCap = 'round';
     ctx.stroke();
+
+    // Main projectile
     ctx.beginPath();
-    ctx.arc(p.pos.x, p.pos.y, p.radius, 0, Math.PI * 2);
-    ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = '#facc15';
+    ctx.arc(proj.pos.x, proj.pos.y, pStyle.size, 0, Math.PI * 2);
+    ctx.shadowColor = pStyle.glow;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = pStyle.color;
     ctx.fill();
+
+    // Inner highlight for mage (fireball effect)
+    if (state.player.characterClass === 'mage') {
+      ctx.beginPath();
+      ctx.arc(proj.pos.x, proj.pos.y, pStyle.size * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fef08a';
+      ctx.fill();
+      // Outer fire particles
+      for (let i = 0; i < 3; i++) {
+        const angle = state.time * 12 + i * 2.1 + proj.pos.x * 0.01;
+        const ox = Math.cos(angle) * pStyle.size * 0.8;
+        const oy = Math.sin(angle) * pStyle.size * 0.8;
+        ctx.beginPath();
+        ctx.arc(proj.pos.x + ox, proj.pos.y + oy, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fill();
+      }
+    }
+
+    // Necromancer: skull-like effect
+    if (state.player.characterClass === 'necromancer') {
+      ctx.beginPath();
+      ctx.arc(proj.pos.x, proj.pos.y, pStyle.size * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = '#e9d5ff';
+      ctx.fill();
+    }
+
+    // Priest: holy glow ring
+    if (state.player.characterClass === 'priest') {
+      ctx.beginPath();
+      ctx.arc(proj.pos.x, proj.pos.y, pStyle.size + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(251,191,36,0.3)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     ctx.shadowBlur = 0;
   }
 

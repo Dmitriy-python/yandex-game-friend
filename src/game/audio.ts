@@ -289,8 +289,24 @@ export function processGameEvents(events: GameEvent[]) {
       case 'player_hit': playPlayerHit(); break;
       case 'boss_ability': playBossAbility(); break;
       case 'ability_use': playAbilityUse(); break;
+      case 'enemy_shoot': playEnemyShoot(); break;
     }
   }
+}
+
+export function playEnemyShoot() {
+  if (!sfxEnabled) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(400, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
+  gain.gain.setValueAtTime(0.05, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.12);
 }
 
 // Import GameEvent type
