@@ -27,6 +27,22 @@ export interface Player {
   meleeTimer: number;
   meleeSwingTimer: number;
   meleeSwingDuration: number;
+  abilityTimer: number;
+  abilityCooldown: number;
+  shieldActive: boolean;
+  shieldTimer: number;
+}
+
+export interface Summon {
+  id: number;
+  pos: Vec2;
+  hp: number;
+  maxHp: number;
+  damage: number;
+  speed: number;
+  radius: number;
+  life: number;
+  targetId?: number;
 }
 
 export type EnemyType = 'normal' | 'fast' | 'tank' | 'boss';
