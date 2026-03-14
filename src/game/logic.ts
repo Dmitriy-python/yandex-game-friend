@@ -540,6 +540,48 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     }
   }
 
+  // Class ability auto-cast
+  s.player.abilityTimer -= dt;
+  if (s.player.abilityTimer <= 0 && s.enemies.length > 0) {
+    s.player.abilityTimer = s.player.abilityCooldown;
+    executeClassAbility(s);
+  }
+
+  // Shield timer
+  if (s.player.shieldActive) {
+    s.player.shieldTimer -= dt;
+    if (s.player.shieldTimer <= 0) {
+      s.player.shieldActive = false;
+    }
+  }
+
+  // Update summons (necromancer skeletons)
+  if (s.summons.length > 0) {
+    s.summons = s.summons.map(summon => {
+      summon.life -= dt;
+      // Find nearest enemy to attack
+      let nearest: Enemy | null = null;
+      let nearDist = Infinity;
+      for (const e of s.enemies) {
+        const d = dist(summon.pos, e.pos);
+        if (d < nearDist) { nearest = e; nearDist = d; }
+      }
+      if (nearest) {
+        const dir = normalize({ x: nearest.pos.x - summon.pos.x, y: nearest.pos.y - summon.pos.y });
+        summon.pos = {
+          x: summon.pos.x + dir.x * summon.speed * dt,
+          y: summon.pos.y + dir.y * summon.speed * dt,
+        };
+        // Attack if close
+        if (nearDist < summon.radius + nearest.radius + 5) {
+          const dmg = nearest.armor ? summon.damage * dt * 2 * (1 - nearest.armor) : summon.damage * dt * 2;
+          nearest.hp -= dmg;
+          nearest.flashTimer = 0.05;
+        }
+      }
+      return summon;
+    }).filter(s => s.life > 0 && s.hp > 0);
+  }
   // Update projectiles
   s.projectiles = s.projectiles
     .map(p => ({
