@@ -134,6 +134,7 @@ export interface GameState {
   coinChests: CoinChest[];
   deathParticles: DeathParticle[];
   bossProjectiles: BossProjectile[];
+  summons: Summon[];
   time: number;
   score: number;
   wave: number;
