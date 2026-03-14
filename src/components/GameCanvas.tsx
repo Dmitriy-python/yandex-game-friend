@@ -29,6 +29,8 @@ export default function GameCanvas() {
     score: 0, wave: 1, time: 0, gameOver: false,
     pendingUpgrade: false, upgradeOptions: [] as GameState['upgradeOptions'],
     enemyCount: 0, isBossWave: false, isBossReward: false, coins: 0,
+    abilityTimer: 0, abilityCooldown: 6, characterClass: 'fighter' as CharacterClass,
+    shieldActive: false,
   });
 
   // Keep saveDataRef in sync
@@ -131,6 +133,10 @@ export default function GameCanvas() {
       isBossWave: s.isBossWave && !s.bossWaveCleared,
       isBossReward: s.upgradeOptions.some(o => o.id.startsWith('boss_')),
       coins: s.coins,
+      abilityTimer: s.player.abilityTimer,
+      abilityCooldown: s.player.abilityCooldown,
+      characterClass: s.player.characterClass,
+      shieldActive: s.player.shieldActive,
     });
   });
 

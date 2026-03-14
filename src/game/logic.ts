@@ -1,4 +1,5 @@
-import { GameState, Enemy, EnemyType, BossVariant, BossVisual, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, BossVisual, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass, Summon } from './types';
+import { CLASS_ABILITY_COOLDOWNS, executeClassAbility } from './abilities';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
@@ -75,9 +76,12 @@ export function createInitialState(characterClass: CharacterClass = 'fighter'): 
       meleeRange: classStats.meleeRange || 60, meleeDamage: classStats.meleeDamage || 35,
       meleeCooldown: classStats.meleeCooldown || 0.8, meleeTimer: 0,
       meleeSwingTimer: 0, meleeSwingDuration: 0.3,
+      abilityTimer: 0, abilityCooldown: CLASS_ABILITY_COOLDOWNS[characterClass],
+      shieldActive: false, shieldTimer: 0,
     },
     enemies: [], projectiles: [], xpOrbs: [], chests: [],
     coinChests: [], deathParticles: [], bossProjectiles: [],
+    summons: [],
     time: 0, score: 0, wave: 1, coins: 0,
     spawnTimer: 0, spawnInterval: 1.5, coinSpawnTimer: 0,
     gameOver: false, paused: false,
@@ -536,6 +540,48 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     }
   }
 
+  // Class ability auto-cast
+  s.player.abilityTimer -= dt;
+  if (s.player.abilityTimer <= 0 && s.enemies.length > 0) {
+    s.player.abilityTimer = s.player.abilityCooldown;
+    executeClassAbility(s);
+  }
+
+  // Shield timer
+  if (s.player.shieldActive) {
+    s.player.shieldTimer -= dt;
+    if (s.player.shieldTimer <= 0) {
+      s.player.shieldActive = false;
+    }
+  }
+
+  // Update summons (necromancer skeletons)
+  if (s.summons.length > 0) {
+    s.summons = s.summons.map(summon => {
+      summon.life -= dt;
+      // Find nearest enemy to attack
+      let nearest: Enemy | null = null;
+      let nearDist = Infinity;
+      for (const e of s.enemies) {
+        const d = dist(summon.pos, e.pos);
+        if (d < nearDist) { nearest = e; nearDist = d; }
+      }
+      if (nearest) {
+        const dir = normalize({ x: nearest.pos.x - summon.pos.x, y: nearest.pos.y - summon.pos.y });
+        summon.pos = {
+          x: summon.pos.x + dir.x * summon.speed * dt,
+          y: summon.pos.y + dir.y * summon.speed * dt,
+        };
+        // Attack if close
+        if (nearDist < summon.radius + nearest.radius + 5) {
+          const dmg = nearest.armor ? summon.damage * dt * 2 * (1 - nearest.armor) : summon.damage * dt * 2;
+          nearest.hp -= dmg;
+          nearest.flashTimer = 0.05;
+        }
+      }
+      return summon;
+    }).filter(s => s.life > 0 && s.hp > 0);
+  }
   // Update projectiles
   s.projectiles = s.projectiles
     .map(p => ({
@@ -628,9 +674,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   // Enemy-player collisions
   let playerWasHit = false;
+  const shieldMult = s.player.shieldActive ? 0.3 : 1;
   for (const e of s.enemies) {
     if (dist(e.pos, s.player.pos) < e.radius + s.player.radius) {
-      s.player.hp -= e.damage * dt;
+      s.player.hp -= e.damage * dt * shieldMult;
       playerWasHit = true;
     }
   }

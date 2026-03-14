@@ -27,6 +27,22 @@ export interface Player {
   meleeTimer: number;
   meleeSwingTimer: number;
   meleeSwingDuration: number;
+  abilityTimer: number;
+  abilityCooldown: number;
+  shieldActive: boolean;
+  shieldTimer: number;
+}
+
+export interface Summon {
+  id: number;
+  pos: Vec2;
+  hp: number;
+  maxHp: number;
+  damage: number;
+  speed: number;
+  radius: number;
+  life: number;
+  targetId?: number;
 }
 
 export type EnemyType = 'normal' | 'fast' | 'tank' | 'boss';
@@ -118,6 +134,7 @@ export interface GameState {
   coinChests: CoinChest[];
   deathParticles: DeathParticle[];
   bossProjectiles: BossProjectile[];
+  summons: Summon[];
   time: number;
   score: number;
   wave: number;
@@ -147,7 +164,8 @@ export type GameEvent =
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
   | { type: 'player_hit' }
-  | { type: 'boss_ability' };
+  | { type: 'boss_ability' }
+  | { type: 'ability_use' };
 
 export interface UpgradeOption {
   id: string;
