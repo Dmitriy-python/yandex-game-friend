@@ -674,9 +674,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   // Enemy-player collisions
   let playerWasHit = false;
+  const shieldMult = s.player.shieldActive ? 0.3 : 1;
   for (const e of s.enemies) {
     if (dist(e.pos, s.player.pos) < e.radius + s.player.radius) {
-      s.player.hp -= e.damage * dt;
+      s.player.hp -= e.damage * dt * shieldMult;
       playerWasHit = true;
     }
   }
