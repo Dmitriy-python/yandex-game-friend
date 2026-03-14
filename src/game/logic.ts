@@ -247,6 +247,11 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     }
   }
 
+  // Determine if this enemy can shoot
+  const canShoot = type === 'tank' || (type === 'normal' && state.wave >= 5 && Math.random() < 0.3);
+  const shootCooldown = type === 'tank' ? 2.5 : 3.5;
+  const shootRange = type === 'tank' ? 280 : 220;
+
   return {
     id: nextId++, type, pos, prevPos: { ...pos },
     hp, maxHp, speed, damage, radius: cfg.radius,
@@ -258,6 +263,10 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     isDashing: false,
     dashTimer: 0,
     armor: armor > 0 ? armor : undefined,
+    canShoot: canShoot || undefined,
+    shootTimer: canShoot ? 1 + Math.random() * 2 : undefined,
+    shootCooldown: canShoot ? shootCooldown : undefined,
+    shootRange: canShoot ? shootRange : undefined,
   };
 }
 
