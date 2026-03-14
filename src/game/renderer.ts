@@ -1,4 +1,4 @@
-import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass, BossVariant } from './types';
+import { GameState, MAP_WIDTH, MAP_HEIGHT, CharacterClass, BossVariant, BossVisual } from './types';
 import playerImg from '@/assets/player.png';
 import playerMageImg from '@/assets/player-mage.png';
 import playerArcherImg from '@/assets/player-archer.png';
@@ -13,6 +13,14 @@ import enemyNormalImg from '@/assets/enemy-normal.png';
 import enemyFastImg from '@/assets/enemy-fast.png';
 import enemyTankImg from '@/assets/enemy-tank.png';
 import enemyBossImg from '@/assets/enemy-boss.png';
+import bossInfernalImg from '@/assets/boss-infernal.png';
+import bossFrostImg from '@/assets/boss-frost.png';
+import bossShadowImg from '@/assets/boss-shadow.png';
+import bossThunderImg from '@/assets/boss-thunder.png';
+import bossSkeletonImg from '@/assets/boss-skeleton.png';
+import bossSpiderImg from '@/assets/boss-spider.png';
+import bossDarkknightImg from '@/assets/boss-darkknight.png';
+import bossChimeraImg from '@/assets/boss-chimera.png';
 import groundTileImg from '@/assets/ground-tile.png';
 
 const GRID_SIZE = 80;
@@ -39,6 +47,10 @@ export async function preloadImages(): Promise<void> {
     playerNecromancer: playerNecromancerImg,
     enemyNormal: enemyNormalImg, enemyFast: enemyFastImg,
     enemyTank: enemyTankImg, enemyBoss: enemyBossImg,
+    bossInfernal: bossInfernalImg, bossFrost: bossFrostImg,
+    bossShadow: bossShadowImg, bossThunder: bossThunderImg,
+    bossSkeleton: bossSkeletonImg, bossSpider: bossSpiderImg,
+    bossDarkknight: bossDarkknightImg, bossChimera: bossChimeraImg,
     ground: groundTileImg,
   };
   const entries = Object.entries(srcs);
@@ -58,6 +70,28 @@ const playerSpriteMap: Record<CharacterClass, string> = {
   elf: 'playerElf',
   dwarf: 'playerDwarf',
   necromancer: 'playerNecromancer',
+};
+
+const bossSpriteMap: Record<BossVisual, string> = {
+  infernal: 'bossInfernal',
+  frost: 'bossFrost',
+  shadow: 'bossShadow',
+  thunder: 'bossThunder',
+  skeleton: 'bossSkeleton',
+  spider: 'bossSpider',
+  darkknight: 'bossDarkknight',
+  chimera: 'bossChimera',
+};
+
+const bossNameMap: Record<BossVisual, string> = {
+  infernal: '🔥 Инфернал',
+  frost: '❄️ Ледяной Дракон',
+  shadow: '👁️ Теневой Призрак',
+  thunder: '⚡ Громовой Голем',
+  skeleton: '💀 Король Скелетов',
+  spider: '🕷️ Паучиха',
+  darkknight: '⚔️ Тёмный Рыцарь',
+  chimera: '🦁 Химера',
 };
 
 function drawSprite(
@@ -138,7 +172,6 @@ function drawBossAura(ctx: CanvasRenderingContext2D, x: number, y: number, radiu
   const aura = BOSS_AURA[variant];
   const pulse = 0.5 + Math.sin(time * 3) * 0.3;
 
-  // Outer glow ring
   ctx.beginPath();
   ctx.arc(x, y, radius + 25 + Math.sin(time * 2) * 5, 0, Math.PI * 2);
   ctx.strokeStyle = aura.color + (0.3 * pulse).toFixed(2) + ')';
@@ -148,7 +181,6 @@ function drawBossAura(ctx: CanvasRenderingContext2D, x: number, y: number, radiu
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Inner aura fill
   const grad = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius + 20);
   grad.addColorStop(0, aura.color + '0.0)');
   grad.addColorStop(0.6, aura.color + (0.12 * pulse).toFixed(2) + ')');
@@ -158,7 +190,6 @@ function drawBossAura(ctx: CanvasRenderingContext2D, x: number, y: number, radiu
   ctx.arc(x, y, radius + 20, 0, Math.PI * 2);
   ctx.fill();
 
-  // Orbiting particles
   for (let i = 0; i < 4; i++) {
     const angle = time * 2 + (Math.PI * 2 * i) / 4;
     const orbitR = radius + 18;
@@ -173,7 +204,6 @@ function drawBossAura(ctx: CanvasRenderingContext2D, x: number, y: number, radiu
     ctx.shadowBlur = 0;
   }
 
-  // Armor indicator for thunder boss
   if (variant === 'thunder') {
     ctx.beginPath();
     ctx.arc(x, y, radius + 5, 0, Math.PI * 2);
@@ -303,7 +333,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     const bob = Math.sin(state.time * 4 + cc.id) * 2;
     ctx.save();
     ctx.translate(cc.pos.x, cc.pos.y + bob);
-    // Glow
     ctx.beginPath();
     ctx.arc(0, 0, cc.radius + 6, 0, Math.PI * 2);
     ctx.shadowColor = '#fbbf24';
@@ -311,7 +340,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.fillStyle = 'rgba(251,191,36,0.15)';
     ctx.fill();
     ctx.shadowBlur = 0;
-    // Coin shape
     ctx.beginPath();
     ctx.arc(0, 0, cc.radius * 0.7, 0, Math.PI * 2);
     ctx.fillStyle = '#fbbf24';
@@ -320,7 +348,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.arc(0, 0, cc.radius * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = '#f59e0b';
     ctx.fill();
-    // $ symbol
     ctx.fillStyle = '#92400e';
     ctx.font = `bold ${cc.radius * 0.8}px sans-serif`;
     ctx.textAlign = 'center';
@@ -338,51 +365,78 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   };
 
   for (const e of state.enemies) {
-    const config = enemySprites[e.type];
     const dx = e.pos.x - e.prevPos.x;
     const dy = e.pos.y - e.prevPos.y;
 
-    // Boss aura with variant-specific visuals
-    if (e.type === 'boss' && e.bossVariant) {
-      drawBossAura(ctx, e.pos.x, e.pos.y, e.radius, e.bossVariant, state.time);
-    }
+    // Boss rendering with unique sprites
+    if (e.type === 'boss') {
+      if (e.bossVariant) {
+        drawBossAura(ctx, e.pos.x, e.pos.y, e.radius, e.bossVariant, state.time);
+      }
 
-    const speedFactor = e.type === 'fast' ? 1.6 : e.type === 'tank' ? 0.6 : e.type === 'boss' ? 0.5 : 1;
-    drawWalkingEntity(
-      ctx, config.sprite,
-      e.pos.x, e.pos.y, config.size,
-      dx, dy, state.time, e.id,
-      e.flashTimer > 0, speedFactor
-    );
+      // Use unique boss sprite based on bossVisual
+      const bossSprite = e.bossVisual ? bossSpriteMap[e.bossVisual] : 'enemyBoss';
+      const speedFactor = 0.5;
+      drawWalkingEntity(
+        ctx, bossSprite,
+        e.pos.x, e.pos.y, 100,
+        dx, dy, state.time, e.id,
+        e.flashTimer > 0, speedFactor
+      );
 
-    // HP bar
-    if (e.hp < e.maxHp) {
-      const barW = e.type === 'boss' ? 80 : e.type === 'tank' ? 60 : 40;
-      const barH = e.type === 'boss' ? 8 : 5;
-      const barX = e.pos.x - barW / 2;
-      const barY = e.pos.y - e.radius - (e.type === 'boss' ? 35 : 12);
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
-      ctx.beginPath();
-      ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
-      ctx.fill();
-      const hpPercent = e.hp / e.maxHp;
-      ctx.fillStyle = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
-      ctx.beginPath();
-      ctx.roundRect(barX, barY, barW * hpPercent, barH, 2);
-      ctx.fill();
+      // HP bar
+      if (e.hp < e.maxHp) {
+        const barW = 80;
+        const barH = 8;
+        const barX = e.pos.x - barW / 2;
+        const barY = e.pos.y - e.radius - 35;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
+        ctx.fill();
+        const hpPercent = e.hp / e.maxHp;
+        ctx.fillStyle = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW * hpPercent, barH, 2);
+        ctx.fill();
 
-      // Boss name label
-      if (e.type === 'boss' && e.bossVariant) {
-        const names: Record<BossVariant, string> = {
-          infernal: '🔥 Инфернал',
-          frost: '❄️ Морозный',
-          shadow: '👁️ Теневой',
-          thunder: '⚡ Громовой',
-        };
-        ctx.font = 'bold 11px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = BOSS_AURA[e.bossVariant].glow;
-        ctx.fillText(names[e.bossVariant], e.pos.x, barY - 6);
+        // Boss name label — use bossVisual for name
+        const visual = e.bossVisual || e.bossVariant;
+        if (visual) {
+          const name = e.bossVisual ? bossNameMap[e.bossVisual] : (e.bossVariant ? bossNameMap[e.bossVariant] || '' : '');
+          const auraGlow = e.bossVariant ? BOSS_AURA[e.bossVariant].glow : '#ff4444';
+          ctx.font = 'bold 11px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = auraGlow;
+          ctx.fillText(name, e.pos.x, barY - 6);
+        }
+      }
+    } else {
+      // Regular enemies
+      const config = enemySprites[e.type];
+      const speedFactor = e.type === 'fast' ? 1.6 : e.type === 'tank' ? 0.6 : 1;
+      drawWalkingEntity(
+        ctx, config.sprite,
+        e.pos.x, e.pos.y, config.size,
+        dx, dy, state.time, e.id,
+        e.flashTimer > 0, speedFactor
+      );
+
+      // HP bar for non-boss
+      if (e.hp < e.maxHp) {
+        const barW = e.type === 'tank' ? 60 : 40;
+        const barH = 5;
+        const barX = e.pos.x - barW / 2;
+        const barY = e.pos.y - e.radius - 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath();
+        ctx.roundRect(barX - 2, barY - 2, barW + 4, barH + 4, 3);
+        ctx.fill();
+        const hpPercent = e.hp / e.maxHp;
+        ctx.fillStyle = hpPercent > 0.5 ? '#4ade80' : hpPercent > 0.25 ? '#fbbf24' : '#ef4444';
+        ctx.beginPath();
+        ctx.roundRect(barX, barY, barW * hpPercent, barH, 2);
+        ctx.fill();
       }
     }
   }
@@ -396,7 +450,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.shadowBlur = 12;
     ctx.fill();
     ctx.shadowBlur = 0;
-    // Trail
     ctx.beginPath();
     ctx.moveTo(bp.pos.x, bp.pos.y);
     ctx.lineTo(bp.pos.x - bp.vel.x * 0.04, bp.pos.y - bp.vel.y * 0.04);
@@ -428,14 +481,12 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   const p = state.player;
   const playerSprite = playerSpriteMap[p.characterClass];
 
-  // Attack range
   ctx.beginPath();
   ctx.arc(p.pos.x, p.pos.y, p.attackRange, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(59,130,246,0.05)';
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Melee swing visual
   if (p.meleeSwingTimer > 0) {
     const progress = 1 - (p.meleeSwingTimer / p.meleeSwingDuration);
     const startAngle = progress * Math.PI * 2 - Math.PI;
@@ -457,7 +508,6 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.fill();
   }
 
-  // Player glow
   const glowColors: Record<CharacterClass, string> = {
     fighter: '#3b82f6',
     mage: '#8b5cf6',
