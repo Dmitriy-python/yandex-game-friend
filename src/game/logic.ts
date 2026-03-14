@@ -1,9 +1,10 @@
-import { GameState, Enemy, EnemyType, BossVariant, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, BossVisual, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
 
 const BOSS_VARIANTS: BossVariant[] = ['infernal', 'frost', 'shadow', 'thunder'];
+const BOSS_VISUALS: BossVisual[] = ['infernal', 'frost', 'shadow', 'thunder', 'skeleton', 'spider', 'darkknight', 'chimera'];
 
 const CLASS_STATS: Record<CharacterClass, Partial<GameState['player']>> = {
   fighter: {
@@ -83,6 +84,7 @@ export function createInitialState(characterClass: CharacterClass = 'fighter'): 
     pendingUpgrade: false, upgradeOptions: [],
     camera: { x: MAP_WIDTH / 2, y: MAP_HEIGHT / 2 },
     isBossWave: false, bossWaveCleared: false,
+    coinsSaved: false,
     events: [],
   };
 }
@@ -112,7 +114,21 @@ function getBossVariantForWave(wave: number): BossVariant {
   return BOSS_VARIANTS[index];
 }
 
-// Death particle colors per enemy type
+function getBossVisualForWave(wave: number): BossVisual {
+  const index = Math.floor((wave / 5 - 1) % BOSS_VISUALS.length);
+  return BOSS_VISUALS[index];
+}
+
+// Nonlinear boss scaling: wave 5=x1, wave 10=x2.5, wave 15=x5, wave 20=x9, wave 25=x14
+function getBossScaling(wave: number): { hpMult: number; dmgMult: number; speedMult: number; cdMult: number } {
+  const bossNum = Math.floor(wave / 5); // 1, 2, 3, 4, 5...
+  const hpMult = 1 + (bossNum - 1) * 0.8 + Math.pow(bossNum - 1, 1.7) * 0.3;
+  const dmgMult = 1 + (bossNum - 1) * 0.5;
+  const speedMult = 1 + (bossNum - 1) * 0.08;
+  const cdMult = Math.max(0.4, 1 - (bossNum - 1) * 0.08); // abilities get faster
+  return { hpMult, dmgMult, speedMult, cdMult };
+}
+
 const DEATH_COLORS: Record<EnemyType, string[]> = {
   normal: ['#ef4444', '#f97316', '#fbbf24'],
   fast: ['#3b82f6', '#60a5fa', '#93c5fd'],
@@ -157,7 +173,7 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     else if (state.wave >= 4 && roll < 0.35) type = 'tank';
   }
 
-  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant' | 'abilityTimer' | 'abilityCooldown' | 'isDashing' | 'dashTimer' | 'armor'>> = {
+  const configs: Record<EnemyType, Omit<Enemy, 'id' | 'pos' | 'prevPos' | 'flashTimer' | 'type' | 'bossVariant' | 'bossVisual' | 'abilityTimer' | 'abilityCooldown' | 'isDashing' | 'dashTimer' | 'armor'>> = {
     normal: {
       hp: 30 * wm, maxHp: 30 * wm,
       speed: 60 + Math.random() * 40 + state.wave * 3,
@@ -177,7 +193,6 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
       xpValue: 3 + Math.floor(state.wave / 2),
     },
     boss: {
-      // Bosses are now 3x stronger
       hp: 1500 * wm, maxHp: 1500 * wm,
       speed: 65 + state.wave * 2,
       damage: 50 + state.wave * 5, radius: 36,
@@ -188,44 +203,54 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
   const cfg = configs[type];
   const pos = spawnPos(state, type === 'boss' ? 200 : 0);
   const variant = type === 'boss' ? (bossVariant || getBossVariantForWave(state.wave)) : undefined;
+  const visual = type === 'boss' ? getBossVisualForWave(state.wave) : undefined;
 
-  // Boss variant-specific stat modifications
+  // Apply nonlinear boss scaling
   let armor = 0;
   let speed = cfg.speed;
   let hp = cfg.hp;
   let maxHp = cfg.maxHp;
+  let damage = cfg.damage;
+  let abilityCooldown = 4;
 
-  if (type === 'boss' && variant) {
-    switch (variant) {
-      case 'infernal':
-        // Ground slam boss — high damage, moderate speed
-        break;
-      case 'frost':
-        // Dash boss — very fast
-        speed *= 1.3;
-        break;
-      case 'shadow':
-        // Projectile/summon boss — moderate
-        hp *= 0.8;
-        maxHp *= 0.8;
-        break;
-      case 'thunder':
-        // Tank boss — slow but huge HP and armor
-        speed *= 0.6;
-        hp *= 1.8;
-        maxHp *= 1.8;
-        armor = 0.4; // 40% damage reduction
-        break;
+  if (type === 'boss') {
+    const scaling = getBossScaling(state.wave);
+    hp *= scaling.hpMult;
+    maxHp *= scaling.hpMult;
+    damage *= scaling.dmgMult;
+    speed *= scaling.speedMult;
+    abilityCooldown *= scaling.cdMult;
+
+    // Variant-specific modifications on top
+    if (variant) {
+      switch (variant) {
+        case 'infernal':
+          break;
+        case 'frost':
+          speed *= 1.3;
+          break;
+        case 'shadow':
+          hp *= 0.8;
+          maxHp *= 0.8;
+          break;
+        case 'thunder':
+          speed *= 0.6;
+          hp *= 1.8;
+          maxHp *= 1.8;
+          armor = 0.4;
+          break;
+      }
     }
   }
 
   return {
     id: nextId++, type, pos, prevPos: { ...pos },
-    hp, maxHp, speed, damage: cfg.damage, radius: cfg.radius,
+    hp, maxHp, speed, damage, radius: cfg.radius,
     xpValue: cfg.xpValue, flashTimer: 0,
     bossVariant: variant,
+    bossVisual: visual,
     abilityTimer: type === 'boss' ? 2 + Math.random() * 2 : undefined,
-    abilityCooldown: type === 'boss' ? 4 : undefined,
+    abilityCooldown: type === 'boss' ? abilityCooldown : undefined,
     isDashing: false,
     dashTimer: 0,
     armor: armor > 0 ? armor : undefined,
@@ -245,7 +270,6 @@ function findClosestEnemy(state: GameState): Enemy | null {
   return closest;
 }
 
-// Apply damage to enemy with armor consideration
 function applyDamage(enemy: Enemy, damage: number): number {
   const actualDamage = enemy.armor ? damage * (1 - enemy.armor) : damage;
   enemy.hp -= actualDamage;
@@ -253,21 +277,18 @@ function applyDamage(enemy: Enemy, damage: number): number {
   return actualDamage;
 }
 
-// Boss ability updates
 function updateBossAbilities(s: GameState, dt: number): void {
   for (const e of s.enemies) {
     if (e.type !== 'boss' || !e.bossVariant) continue;
 
-    // Update dash
     if (e.isDashing && e.dashTimer !== undefined && e.dashTimer > 0) {
       e.dashTimer -= dt;
       if (e.dashTimer <= 0) {
         e.isDashing = false;
-        e.speed /= 3; // Restore speed after dash
+        e.speed /= 3;
       }
     }
 
-    // Ability cooldown
     if (e.abilityTimer !== undefined) {
       e.abilityTimer -= dt;
       if (e.abilityTimer <= 0) {
@@ -275,7 +296,6 @@ function updateBossAbilities(s: GameState, dt: number): void {
 
         switch (e.bossVariant) {
           case 'infernal': {
-            // Ground slam — AoE damage around boss
             const slamRange = 120;
             const d = dist(e.pos, s.player.pos);
             if (d < slamRange) {
@@ -283,7 +303,6 @@ function updateBossAbilities(s: GameState, dt: number): void {
               s.events.push({ type: 'player_hit' });
             }
             s.events.push({ type: 'boss_ability' });
-            // Spawn slam visual particles
             for (let i = 0; i < 12; i++) {
               const angle = (Math.PI * 2 * i) / 12;
               s.deathParticles.push({
@@ -297,7 +316,6 @@ function updateBossAbilities(s: GameState, dt: number): void {
             break;
           }
           case 'frost': {
-            // Dash toward player
             if (!e.isDashing) {
               e.isDashing = true;
               e.dashTimer = 0.5;
@@ -307,15 +325,17 @@ function updateBossAbilities(s: GameState, dt: number): void {
             break;
           }
           case 'shadow': {
-            // Shoot projectiles at player
             const dir = normalize({
               x: s.player.pos.x - e.pos.x,
               y: s.player.pos.y - e.pos.y,
             });
             const projSpeed = 300;
-            // Shoot 3 spread projectiles
-            for (let i = -1; i <= 1; i++) {
-              const spread = i * 0.3;
+            // Later waves: more spread projectiles
+            const bossNum = Math.floor(s.wave / 5);
+            const projCount = bossNum >= 4 ? 5 : 3;
+            const halfSpread = projCount === 5 ? 2 : 1;
+            for (let i = -halfSpread; i <= halfSpread; i++) {
+              const spread = i * 0.25;
               const px = dir.x * Math.cos(spread) - dir.y * Math.sin(spread);
               const py = dir.x * Math.sin(spread) + dir.y * Math.cos(spread);
               s.bossProjectiles.push({
@@ -330,9 +350,11 @@ function updateBossAbilities(s: GameState, dt: number): void {
             }
             s.events.push({ type: 'boss_ability' });
 
-            // Summon 2 minions
-            if (Math.random() < 0.4) {
-              for (let i = 0; i < 2; i++) {
+            // Summon minions — more on later waves
+            const summonChance = Math.min(0.7, 0.3 + bossNum * 0.08);
+            if (Math.random() < summonChance) {
+              const minionCount = bossNum >= 3 ? 3 : 2;
+              for (let i = 0; i < minionCount; i++) {
                 const minionPos = {
                   x: e.pos.x + (Math.random() - 0.5) * 80,
                   y: e.pos.y + (Math.random() - 0.5) * 80,
@@ -350,15 +372,12 @@ function updateBossAbilities(s: GameState, dt: number): void {
             break;
           }
           case 'thunder': {
-            // Thunder boss doesn't use active abilities — just tanks with armor
-            // But periodically releases a shockwave
             const shockRange = 150;
             const d = dist(e.pos, s.player.pos);
             if (d < shockRange) {
               s.player.hp -= e.damage * 0.4;
               s.events.push({ type: 'player_hit' });
             }
-            // Shockwave particles
             for (let i = 0; i < 16; i++) {
               const angle = (Math.PI * 2 * i) / 16;
               s.deathParticles.push({
@@ -399,7 +418,6 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
   const isBossWave = s.wave % 5 === 0;
   s.isBossWave = isBossWave;
 
-  // Block wave advancement during boss wave until boss is dead
   const canAdvanceWave = !isBossWave || s.bossWaveCleared;
 
   if (canAdvanceWave && s.time > s.wave * 25) {
@@ -440,7 +458,7 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     s.spawnTimer = 0;
   }
 
-  // Coin chest spawning (rare, low value)
+  // Coin chest spawning
   s.coinSpawnTimer += dt;
   const coinInterval = Math.max(20, 35 - s.wave * 0.3);
   if (s.coinSpawnTimer >= coinInterval && s.coinChests.length < 3) {
@@ -533,11 +551,10 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
       x: s.player.pos.x - e.pos.x,
       y: s.player.pos.y - e.pos.y,
     });
-    const currentSpeed = e.isDashing ? e.speed : e.speed;
     return {
       ...e,
       prevPos: { ...e.pos },
-      pos: { x: e.pos.x + dir.x * currentSpeed * dt, y: e.pos.y + dir.y * currentSpeed * dt },
+      pos: { x: e.pos.x + dir.x * e.speed * dt, y: e.pos.y + dir.y * e.speed * dt },
       flashTimer: Math.max(0, e.flashTimer - dt),
     };
   });
@@ -547,7 +564,7 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
     .map(p => ({
       ...p,
       pos: { x: p.pos.x + p.vel.x * dt, y: p.pos.y + p.vel.y * dt },
-      vel: { x: p.vel.x * 0.95, y: p.vel.y * 0.95 + 100 * dt }, // gravity
+      vel: { x: p.vel.x * 0.95, y: p.vel.y * 0.95 + 100 * dt },
       life: p.life - dt,
     }))
     .filter(p => p.life > 0);
