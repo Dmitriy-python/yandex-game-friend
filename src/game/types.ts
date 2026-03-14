@@ -71,6 +71,11 @@ export interface Enemy {
   isDashing?: boolean;
   dashTimer?: number;
   armor?: number;
+  // Ranged attack fields
+  canShoot?: boolean;
+  shootTimer?: number;
+  shootCooldown?: number;
+  shootRange?: number;
 }
 
 export interface DeathParticle {
@@ -165,7 +170,8 @@ export type GameEvent =
   | { type: 'boss_spawn' }
   | { type: 'player_hit' }
   | { type: 'boss_ability' }
-  | { type: 'ability_use' };
+  | { type: 'ability_use' }
+  | { type: 'enemy_shoot' };
 
 export interface UpgradeOption {
   id: string;

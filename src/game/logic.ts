@@ -247,6 +247,11 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     }
   }
 
+  // Determine if this enemy can shoot
+  const canShoot = type === 'tank' || (type === 'normal' && state.wave >= 5 && Math.random() < 0.3);
+  const shootCooldown = type === 'tank' ? 2.5 : 3.5;
+  const shootRange = type === 'tank' ? 280 : 220;
+
   return {
     id: nextId++, type, pos, prevPos: { ...pos },
     hp, maxHp, speed, damage, radius: cfg.radius,
@@ -258,6 +263,10 @@ function spawnEnemy(state: GameState, forceType?: EnemyType, bossVariant?: BossV
     isDashing: false,
     dashTimer: 0,
     armor: armor > 0 ? armor : undefined,
+    canShoot: canShoot || undefined,
+    shootTimer: canShoot ? 1 + Math.random() * 2 : undefined,
+    shootCooldown: canShoot ? shootCooldown : undefined,
+    shootRange: canShoot ? shootRange : undefined,
   };
 }
 
@@ -477,6 +486,36 @@ export function updateGame(state: GameState, dt: number, input: { dx: number; dy
 
   // Boss abilities
   updateBossAbilities(s, dt);
+
+  // Enemy ranged attacks
+  for (const e of s.enemies) {
+    if (!e.canShoot || e.type === 'boss') continue;
+    if (e.shootTimer !== undefined) {
+      e.shootTimer -= dt;
+      if (e.shootTimer <= 0) {
+        e.shootTimer = e.shootCooldown || 3;
+        const d = dist(e.pos, s.player.pos);
+        if (d < (e.shootRange || 250)) {
+          const dir = normalize({
+            x: s.player.pos.x - e.pos.x,
+            y: s.player.pos.y - e.pos.y,
+          });
+          const projSpeed = 200 + s.wave * 5;
+          const color = e.type === 'tank' ? '#6b7280' : '#ef4444';
+          s.bossProjectiles.push({
+            id: nextId++,
+            pos: { ...e.pos },
+            vel: { x: dir.x * projSpeed, y: dir.y * projSpeed },
+            damage: e.damage * 0.4,
+            radius: e.type === 'tank' ? 7 : 5,
+            life: 2.5,
+            color,
+          });
+          s.events.push({ type: 'enemy_shoot' });
+        }
+      }
+    }
+  }
 
   // Update boss projectiles
   s.bossProjectiles = s.bossProjectiles
