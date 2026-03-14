@@ -259,6 +259,21 @@ export function playCoinCollect() {
   osc.stop(ctx.currentTime + 0.12);
 }
 
+export function playAbilityUse() {
+  if (!sfxEnabled) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(600, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.25);
+}
+
 export function processGameEvents(events: GameEvent[]) {
   for (const e of events) {
     switch (e.type) {
@@ -273,6 +288,7 @@ export function processGameEvents(events: GameEvent[]) {
       case 'boss_spawn': playBossSpawn(); break;
       case 'player_hit': playPlayerHit(); break;
       case 'boss_ability': playBossAbility(); break;
+      case 'ability_use': playAbilityUse(); break;
     }
   }
 }

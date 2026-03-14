@@ -1,3 +1,6 @@
+import { CLASS_ABILITY_NAMES } from '@/game/abilities';
+import { CharacterClass } from '@/game/types';
+
 interface GameHUDProps {
   hp: number; maxHp: number;
   xp: number; xpToNext: number;
@@ -6,16 +9,24 @@ interface GameHUDProps {
   enemyCount: number;
   isBossWave: boolean;
   coins: number;
+  abilityTimer: number;
+  abilityCooldown: number;
+  characterClass: CharacterClass;
+  shieldActive: boolean;
 }
 
 export default function GameHUD(props: GameHUDProps) {
-  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave, coins } = props;
+  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave, coins, abilityTimer, abilityCooldown, characterClass, shieldActive } = props;
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
     const sec = Math.floor(t % 60);
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
+
+  const abilityReady = abilityTimer <= 0;
+  const abilityProgress = abilityReady ? 1 : 1 - (abilityTimer / abilityCooldown);
+  const abilityName = CLASS_ABILITY_NAMES[characterClass];
 
   return (
     <div className="absolute top-0 left-0 right-0 p-3 flex items-start justify-between pointer-events-none">
@@ -37,6 +48,25 @@ export default function GameHUD(props: GameHUDProps) {
           </div>
           <span className="text-xs font-mono" style={{ color: '#86efac' }}>Lv.{level}</span>
         </div>
+        {/* Ability cooldown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold" style={{ color: abilityReady ? '#facc15' : '#64748b' }}>⚡</span>
+          <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.6)' }}>
+            <div className="h-full rounded-full transition-all duration-100"
+              style={{
+                width: `${abilityProgress * 100}%`,
+                background: abilityReady
+                  ? 'linear-gradient(90deg, #facc15, #f59e0b)'
+                  : 'linear-gradient(90deg, #475569, #64748b)',
+              }} />
+          </div>
+          <span className="text-xs font-mono" style={{ color: abilityReady ? '#fef08a' : '#94a3b8' }}>
+            {abilityReady ? '✦' : Math.ceil(abilityTimer) + 's'}
+          </span>
+        </div>
+        <span className="text-[10px] font-mono" style={{ color: '#94a3b8' }}>
+          {abilityName}{shieldActive ? ' 🛡️' : ''}
+        </span>
       </div>
 
       {/* Center - Time & Wave */}
