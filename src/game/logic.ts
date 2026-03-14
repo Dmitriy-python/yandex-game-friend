@@ -1,4 +1,5 @@
-import { GameState, Enemy, EnemyType, BossVariant, BossVisual, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass } from './types';
+import { GameState, Enemy, EnemyType, BossVariant, BossVisual, Projectile, XpOrb, Chest, CoinChest, DeathParticle, BossProjectile, MAP_WIDTH, MAP_HEIGHT, Vec2, GameEvent, CharacterClass, Summon } from './types';
+import { CLASS_ABILITY_COOLDOWNS, executeClassAbility } from './abilities';
 import { getRandomUpgrades, getBossUpgrades } from './upgrades';
 
 let nextId = 1;
