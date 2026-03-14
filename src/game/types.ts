@@ -163,7 +163,8 @@ export type GameEvent =
   | { type: 'level_up' }
   | { type: 'boss_spawn' }
   | { type: 'player_hit' }
-  | { type: 'boss_ability' };
+  | { type: 'boss_ability' }
+  | { type: 'ability_use' };
 
 export interface UpgradeOption {
   id: string;
