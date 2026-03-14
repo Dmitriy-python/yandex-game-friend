@@ -71,6 +71,11 @@ export interface Enemy {
   isDashing?: boolean;
   dashTimer?: number;
   armor?: number;
+  // Ranged attack fields
+  canShoot?: boolean;
+  shootTimer?: number;
+  shootCooldown?: number;
+  shootRange?: number;
 }
 
 export interface DeathParticle {
