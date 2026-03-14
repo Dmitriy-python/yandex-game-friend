@@ -7,7 +7,7 @@ export interface Vec2 {
 
 export interface Player {
   pos: Vec2;
-  vel: Vec2; // for animation tracking
+  vel: Vec2;
   hp: number;
   maxHp: number;
   speed: number;
@@ -21,7 +21,6 @@ export interface Player {
   projectileSpeed: number;
   radius: number;
   characterClass: CharacterClass;
-  // Melee
   meleeRange: number;
   meleeDamage: number;
   meleeCooldown: number;
@@ -34,12 +33,16 @@ export type EnemyType = 'normal' | 'fast' | 'tank' | 'boss';
 
 export type BossVariant = 'infernal' | 'frost' | 'shadow' | 'thunder';
 
+// Visual boss identity — cycles through unique sprites
+export type BossVisual = 'infernal' | 'frost' | 'shadow' | 'thunder' | 'skeleton' | 'spider' | 'darkknight' | 'chimera';
+
 export interface Enemy {
   id: number;
   type: EnemyType;
   bossVariant?: BossVariant;
+  bossVisual?: BossVisual;
   pos: Vec2;
-  prevPos: Vec2; // for animation
+  prevPos: Vec2;
   hp: number;
   maxHp: number;
   speed: number;
@@ -47,12 +50,11 @@ export interface Enemy {
   radius: number;
   xpValue: number;
   flashTimer: number;
-  // Boss ability timers
   abilityTimer?: number;
   abilityCooldown?: number;
   isDashing?: boolean;
   dashTimer?: number;
-  armor?: number; // damage reduction factor 0-1
+  armor?: number;
 }
 
 export interface DeathParticle {
@@ -130,7 +132,7 @@ export interface GameState {
   camera: Vec2;
   isBossWave: boolean;
   bossWaveCleared: boolean;
-  // Events for audio
+  coinsSaved: boolean; // guard against double-saving coins
   events: GameEvent[];
 }
 
@@ -156,4 +158,3 @@ export interface UpgradeOption {
 
 export const MAP_WIDTH = 4000;
 export const MAP_HEIGHT = 4000;
-

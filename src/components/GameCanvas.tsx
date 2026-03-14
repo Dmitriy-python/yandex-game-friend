@@ -20,6 +20,7 @@ export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>(createInitialState());
   const keysRef = useRef<Set<string>>(new Set());
+  const saveDataRef = useRef<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {}, unlockedCharacters: ['fighter'] });
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
   const [saveData, setSaveData] = useState<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {}, unlockedCharacters: ['fighter'] });
@@ -29,6 +30,9 @@ export default function GameCanvas() {
     pendingUpgrade: false, upgradeOptions: [] as GameState['upgradeOptions'],
     enemyCount: 0, isBossWave: false, isBossReward: false, coins: 0,
   });
+
+  // Keep saveDataRef in sync
+  useEffect(() => { saveDataRef.current = saveData; }, [saveData]);
 
   // Load save data on mount
   useEffect(() => {
@@ -74,6 +78,7 @@ export default function GameCanvas() {
   // Persist save helper
   const persistSave = useCallback(async (data: SaveData) => {
     setSaveData(data);
+    saveDataRef.current = data;
     await saveSaveData(data);
   }, []);
 
@@ -103,12 +108,14 @@ export default function GameCanvas() {
 
     const s = stateRef.current;
 
-    // Game over — save
-    if (s.gameOver && screen === 'playing') {
-      const totalCoins = saveData.coins + s.coins;
-      const newHighScore = s.score > saveData.highScore ? s.score : saveData.highScore;
-      const newHighWave = s.wave > saveData.highWave ? s.wave : saveData.highWave;
-      persistSave({ ...saveData, coins: totalCoins, highScore: newHighScore, highWave: newHighWave });
+    // Game over — save ONCE using coinsSaved guard
+    if (s.gameOver && !s.coinsSaved) {
+      s.coinsSaved = true;
+      const sd = saveDataRef.current;
+      const totalCoins = sd.coins + s.coins;
+      const newHighScore = s.score > sd.highScore ? s.score : sd.highScore;
+      const newHighWave = s.wave > sd.highWave ? s.wave : sd.highWave;
+      persistSave({ ...sd, coins: totalCoins, highScore: newHighScore, highWave: newHighWave });
       setLeaderboardScore(s.score);
       stopMusic();
     }
@@ -139,13 +146,12 @@ export default function GameCanvas() {
 
   const handleStartGame = useCallback(() => {
     const state = createInitialState(selectedClass);
-    // Apply shop upgrades to starting stats
-    applyShopUpgrades(saveData.upgrades, state.player);
+    applyShopUpgrades(saveDataRef.current.upgrades, state.player);
     state.player.hp = state.player.maxHp;
     stateRef.current = state;
     setScreen('playing');
     startMusic();
-  }, [selectedClass, saveData.upgrades]);
+  }, [selectedClass]);
 
   const handleResume = useCallback(() => {
     stateRef.current.paused = false;
@@ -153,32 +159,35 @@ export default function GameCanvas() {
   }, []);
 
   const handleMainMenu = useCallback(() => {
-    // Save coins earned this session
-    const earnedCoins = stateRef.current.coins;
-    if (earnedCoins > 0) {
-      persistSave({ ...saveData, coins: saveData.coins + earnedCoins });
+    // Only save coins if game wasn't already over (coins already saved on game over)
+    const s = stateRef.current;
+    if (!s.coinsSaved && s.coins > 0) {
+      const sd = saveDataRef.current;
+      persistSave({ ...sd, coins: sd.coins + s.coins });
     }
     stopMusic();
     stateRef.current = createInitialState();
     setScreen('menu');
-  }, [saveData, persistSave]);
+  }, [persistSave]);
 
   const handleBuyUpgrade = useCallback((id: string, cost: number) => {
-    const newUpgrades = { ...saveData.upgrades, [id]: (saveData.upgrades[id] || 0) + 1 };
-    const newData = { ...saveData, coins: saveData.coins - cost, upgrades: newUpgrades };
+    const sd = saveDataRef.current;
+    const newUpgrades = { ...sd.upgrades, [id]: (sd.upgrades[id] || 0) + 1 };
+    const newData = { ...sd, coins: sd.coins - cost, upgrades: newUpgrades };
     persistSave(newData);
-  }, [saveData, persistSave]);
+  }, [persistSave]);
 
   const handleUnlockCharacter = useCallback((charId: string, cost: number) => {
-    if (saveData.coins < cost || saveData.unlockedCharacters.includes(charId)) return;
+    const sd = saveDataRef.current;
+    if (sd.coins < cost || sd.unlockedCharacters.includes(charId)) return;
     const newData = {
-      ...saveData,
-      coins: saveData.coins - cost,
-      unlockedCharacters: [...saveData.unlockedCharacters, charId],
+      ...sd,
+      coins: sd.coins - cost,
+      unlockedCharacters: [...sd.unlockedCharacters, charId],
     };
     persistSave(newData);
     setSelectedClass(charId as CharacterClass);
-  }, [saveData, persistSave]);
+  }, [persistSave]);
 
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
