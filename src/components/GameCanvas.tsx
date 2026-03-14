@@ -29,6 +29,8 @@ export default function GameCanvas() {
     score: 0, wave: 1, time: 0, gameOver: false,
     pendingUpgrade: false, upgradeOptions: [] as GameState['upgradeOptions'],
     enemyCount: 0, isBossWave: false, isBossReward: false, coins: 0,
+    abilityTimer: 0, abilityCooldown: 6, characterClass: 'fighter' as CharacterClass,
+    shieldActive: false,
   });
 
   // Keep saveDataRef in sync
