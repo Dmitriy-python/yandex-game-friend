@@ -477,6 +477,36 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
     ctx.shadowBlur = 0;
   }
 
+  // Summons (necromancer skeletons)
+  for (const summon of state.summons) {
+    const alpha = Math.min(1, summon.life / 1);
+    ctx.globalAlpha = alpha;
+    // Shadow
+    ctx.save();
+    ctx.translate(summon.pos.x, summon.pos.y + summon.radius + 4);
+    ctx.scale(1, 0.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, summon.radius * 0.8, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(124,58,237,0.3)';
+    ctx.fill();
+    ctx.restore();
+    // Body
+    ctx.beginPath();
+    ctx.arc(summon.pos.x, summon.pos.y, summon.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#a78bfa';
+    ctx.shadowColor = '#7c3aed';
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Eyes
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.arc(summon.pos.x - 3, summon.pos.y - 2, 2, 0, Math.PI * 2);
+    ctx.arc(summon.pos.x + 3, summon.pos.y - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   // Player
   const p = state.player;
   const playerSprite = playerSpriteMap[p.characterClass];
@@ -486,6 +516,23 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.strokeStyle = 'rgba(59,130,246,0.05)';
   ctx.lineWidth = 2;
   ctx.stroke();
+
+  // Shield visual (knight ability)
+  if (p.shieldActive) {
+    const shieldPulse = 0.6 + Math.sin(state.time * 6) * 0.2;
+    ctx.beginPath();
+    ctx.arc(p.pos.x, p.pos.y, p.radius + 25, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(148,163,184,${shieldPulse})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#94a3b8';
+    ctx.shadowBlur = 15;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(p.pos.x, p.pos.y, p.radius + 25, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(148,163,184,${shieldPulse * 0.15})`;
+    ctx.fill();
+  }
 
   if (p.meleeSwingTimer > 0) {
     const progress = 1 - (p.meleeSwingTimer / p.meleeSwingDuration);
