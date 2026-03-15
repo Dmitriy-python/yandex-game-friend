@@ -48,7 +48,7 @@ export async function preloadImages(): Promise<void> {
     bossShadow: bossShadowImg, bossThunder: bossThunderImg,
     bossSkeleton: bossSkeletonImg, bossSpider: bossSpiderImg,
     bossDarkknight: bossDarkknightImg, bossChimera: bossChimeraImg,
-    ground: groundTileImg,
+    ground: groundMapImg,
   };
   const entries = Object.entries(srcs);
   const loaded = await Promise.all(entries.map(([, src]) => loadImage(src)));
