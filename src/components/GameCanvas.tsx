@@ -107,6 +107,9 @@ export default function GameCanvas() {
     if (keys.has('s')) dy += 1;
     if (keys.has('a')) dx -= 1;
     if (keys.has('d')) dx += 1;
+    // Merge joystick input
+    const j = joystickRef.current;
+    if (j.dx !== 0 || j.dy !== 0) { dx = j.dx; dy = j.dy; }
 
     stateRef.current = updateGame(stateRef.current, dt, { dx, dy });
 
