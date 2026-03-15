@@ -180,5 +180,5 @@ export interface UpgradeOption {
   apply: (state: GameState) => void;
 }
 
-export const MAP_WIDTH = 3840;
-export const MAP_HEIGHT = 2160;
+export const MAP_WIDTH = 1600;
+export const MAP_HEIGHT = 1600;

@@ -47,7 +47,7 @@ export default function GameCanvas() {
 
   // Keyboard handling
   useEffect(() => {
-    const gameKeys = new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape',' ']);
+    const gameKeys = new Set(['w','a','s','d','escape',' ']);
     const down = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       if (gameKeys.has(key)) e.preventDefault();
@@ -92,10 +92,10 @@ export default function GameCanvas() {
 
     const keys = keysRef.current;
     let dx = 0, dy = 0;
-    if (keys.has('w') || keys.has('arrowup')) dy -= 1;
-    if (keys.has('s') || keys.has('arrowdown')) dy += 1;
-    if (keys.has('a') || keys.has('arrowleft')) dx -= 1;
-    if (keys.has('d') || keys.has('arrowright')) dx += 1;
+    if (keys.has('w')) dy -= 1;
+    if (keys.has('s')) dy += 1;
+    if (keys.has('a')) dx -= 1;
+    if (keys.has('d')) dx += 1;
 
     stateRef.current = updateGame(stateRef.current, dt, { dx, dy });
 
@@ -230,7 +230,7 @@ export default function GameCanvas() {
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
         style={{ color: 'rgba(148,163,184,0.5)' }}>
-        WASD / Стрелки • Авто-атака • ESC пауза
+        WASD • Авто-атака • ESC пауза
       </div>
 
       {screen === 'paused' && (
