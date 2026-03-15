@@ -42,7 +42,7 @@
     </filter>
   </defs>
 
-  <g transform="translate(420 -420) scale(1.2)">
+  <g transform="scale(2)">
   <rect width="1600" height="1600" fill="url(#ground)"/>
   <rect width="1600" height="1600" fill="url(#grain)"/>
 
