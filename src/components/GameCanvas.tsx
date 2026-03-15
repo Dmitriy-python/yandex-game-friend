@@ -47,7 +47,7 @@ export default function GameCanvas() {
 
   // Keyboard handling
   useEffect(() => {
-    const gameKeys = new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape',' ']);
+    const gameKeys = new Set(['w','a','s','d','escape',' ']);
     const down = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       if (gameKeys.has(key)) e.preventDefault();
