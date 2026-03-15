@@ -92,10 +92,10 @@ export default function GameCanvas() {
 
     const keys = keysRef.current;
     let dx = 0, dy = 0;
-    if (keys.has('w') || keys.has('arrowup')) dy -= 1;
-    if (keys.has('s') || keys.has('arrowdown')) dy += 1;
-    if (keys.has('a') || keys.has('arrowleft')) dx -= 1;
-    if (keys.has('d') || keys.has('arrowright')) dx += 1;
+    if (keys.has('w')) dy -= 1;
+    if (keys.has('s')) dy += 1;
+    if (keys.has('a')) dx -= 1;
+    if (keys.has('d')) dx += 1;
 
     stateRef.current = updateGame(stateRef.current, dt, { dx, dy });
 
