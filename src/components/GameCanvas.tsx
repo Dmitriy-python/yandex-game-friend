@@ -230,7 +230,7 @@ export default function GameCanvas() {
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
         style={{ color: 'rgba(148,163,184,0.5)' }}>
-        WASD / Стрелки • Авто-атака • ESC пауза
+        WASD • Авто-атака • ESC пауза
       </div>
 
       {screen === 'paused' && (

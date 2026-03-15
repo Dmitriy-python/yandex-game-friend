@@ -21,7 +21,7 @@ import bossSkeletonImg from '@/assets/boss-skeleton.png';
 import bossSpiderImg from '@/assets/boss-spider.png';
 import bossDarkknightImg from '@/assets/boss-darkknight.png';
 import bossChimeraImg from '@/assets/boss-chimera.png';
-import groundMapImg from '@/assets/ground-map.png';
+const groundMapImg = '/ground-map.svg';
 
 const images: Record<string, HTMLImageElement> = {};
 let imagesLoaded = false;
