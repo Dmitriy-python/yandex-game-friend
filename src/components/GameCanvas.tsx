@@ -236,16 +236,38 @@ export default function GameCanvas() {
       onBuy={handleBuyUpgrade} onBack={() => setScreen('menu')} />;
   }
 
+  const handleJoystickMove = useCallback((dx: number, dy: number) => {
+    joystickRef.current = { dx, dy };
+  }, []);
+
+  const handleAbilityUse = useCallback(() => {
+    keysRef.current.add(' ');
+    setTimeout(() => keysRef.current.delete(' '), 100);
+  }, []);
+
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#1a1f2e' }}>
       <canvas ref={canvasRef} className="block" />
 
       <GameHUD {...uiState} />
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
-        style={{ color: 'rgba(148,163,184,0.5)' }}>
-        WASD • Авто-атака • ESC пауза
-      </div>
+      {!isMobile && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
+          style={{ color: 'rgba(148,163,184,0.5)' }}>
+          WASD • Авто-атака • ESC пауза
+        </div>
+      )}
+
+      {isMobile && screen === 'playing' && !uiState.gameOver && !uiState.pendingUpgrade && (
+        <>
+          <VirtualJoystick onMove={handleJoystickMove} />
+          <AbilityButton
+            abilityTimer={uiState.abilityTimer}
+            abilityCooldown={uiState.abilityCooldown}
+            onUse={handleAbilityUse}
+          />
+        </>
+      )}
 
       {screen === 'paused' && (
         <PauseMenu onResume={handleResume} onMainMenu={handleMainMenu} />
