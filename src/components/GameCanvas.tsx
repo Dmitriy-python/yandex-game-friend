@@ -47,8 +47,10 @@ export default function GameCanvas() {
 
   // Keyboard handling
   useEffect(() => {
+    const gameKeys = new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','escape',' ']);
     const down = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
+      if (gameKeys.has(key)) e.preventDefault();
       keysRef.current.add(key);
       if (key === 'escape') {
         setScreen(prev => {
@@ -59,9 +61,9 @@ export default function GameCanvas() {
       }
     };
     const up = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
-    window.addEventListener('keydown', down);
-    window.addEventListener('keyup', up);
-    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
+    window.addEventListener('keydown', down, { capture: true });
+    window.addEventListener('keyup', up, { capture: true });
+    return () => { window.removeEventListener('keydown', down, { capture: true }); window.removeEventListener('keyup', up, { capture: true }); };
   }, []);
 
   // Canvas resize
