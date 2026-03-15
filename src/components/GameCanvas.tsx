@@ -211,6 +211,15 @@ export default function GameCanvas() {
     setSelectedClass(charId as CharacterClass);
   }, [persistSave]);
 
+  const handleJoystickMove = useCallback((dx: number, dy: number) => {
+    joystickRef.current = { dx, dy };
+  }, []);
+
+  const handleAbilityUse = useCallback(() => {
+    keysRef.current.add(' ');
+    setTimeout(() => keysRef.current.delete(' '), 100);
+  }, []);
+
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
   }
@@ -235,15 +244,6 @@ export default function GameCanvas() {
     return <UpgradeShop coins={saveData.coins} upgrades={saveData.upgrades}
       onBuy={handleBuyUpgrade} onBack={() => setScreen('menu')} />;
   }
-
-  const handleJoystickMove = useCallback((dx: number, dy: number) => {
-    joystickRef.current = { dx, dy };
-  }, []);
-
-  const handleAbilityUse = useCallback(() => {
-    keysRef.current.add(' ');
-    setTimeout(() => keysRef.current.delete(' '), 100);
-  }, []);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#1a1f2e' }}>
