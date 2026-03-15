@@ -45,14 +45,18 @@ export default function GameCanvas() {
     })();
   }, []);
 
-  // Keyboard handling
+  // Keyboard handling — use e.code so WASD works regardless of keyboard layout (EN/RU)
   useEffect(() => {
-    const gameKeys = new Set(['w','a','s','d','escape',' ']);
+    const codeToKey: Record<string, string> = {
+      'KeyW': 'w', 'KeyA': 'a', 'KeyS': 's', 'KeyD': 'd',
+      'Space': ' ', 'Escape': 'escape',
+    };
+    const gameCodes = new Set(Object.keys(codeToKey));
     const down = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
-      if (gameKeys.has(key)) e.preventDefault();
-      keysRef.current.add(key);
-      if (key === 'escape') {
+      if (gameCodes.has(e.code)) e.preventDefault();
+      const mapped = codeToKey[e.code];
+      if (mapped) keysRef.current.add(mapped);
+      if (e.code === 'Escape') {
         setScreen(prev => {
           if (prev === 'playing') { stateRef.current.paused = true; return 'paused'; }
           if (prev === 'paused') { stateRef.current.paused = false; return 'playing'; }
@@ -60,7 +64,10 @@ export default function GameCanvas() {
         });
       }
     };
-    const up = (e: KeyboardEvent) => keysRef.current.delete(e.key.toLowerCase());
+    const up = (e: KeyboardEvent) => {
+      const mapped = codeToKey[e.code];
+      if (mapped) keysRef.current.delete(mapped);
+    };
     window.addEventListener('keydown', down, { capture: true });
     window.addEventListener('keyup', up, { capture: true });
     return () => { window.removeEventListener('keydown', down, { capture: true }); window.removeEventListener('keyup', up, { capture: true }); };
