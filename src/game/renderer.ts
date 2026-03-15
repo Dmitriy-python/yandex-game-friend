@@ -219,11 +219,8 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   const offsetX = canvasW / 2 - cam.x;
   const offsetY = canvasH / 2 - cam.y;
 
-  // Background
-  const gradient = ctx.createRadialGradient(canvasW / 2, canvasH / 2, 0, canvasW / 2, canvasH / 2, Math.max(canvasW, canvasH));
-  gradient.addColorStop(0, '#1a2035');
-  gradient.addColorStop(1, '#0f1218');
-  ctx.fillStyle = gradient;
+  // Background fill outside map
+  ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(0, 0, canvasW, canvasH);
 
   // Boss wave red tint
@@ -235,33 +232,9 @@ export function renderGame(ctx: CanvasRenderingContext2D, state: GameState, canv
   ctx.save();
   ctx.translate(offsetX, offsetY);
 
-  // Ground tiles
+  // Single ground map image
   if (images.ground) {
-    const startTX = Math.max(0, Math.floor((cam.x - canvasW / 2) / TILE_SIZE));
-    const endTX = Math.min(Math.ceil(MAP_WIDTH / TILE_SIZE), Math.ceil((cam.x + canvasW / 2) / TILE_SIZE));
-    const startTY = Math.max(0, Math.floor((cam.y - canvasH / 2) / TILE_SIZE));
-    const endTY = Math.min(Math.ceil(MAP_HEIGHT / TILE_SIZE), Math.ceil((cam.y + canvasH / 2) / TILE_SIZE));
-    for (let tx = startTX; tx < endTX; tx++) {
-      for (let ty = startTY; ty < endTY; ty++) {
-        ctx.drawImage(images.ground, tx * TILE_SIZE, ty * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-      }
-    }
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.fillRect(0, 0, MAP_WIDTH, MAP_HEIGHT);
-  }
-
-  // Grid overlay
-  ctx.strokeStyle = 'rgba(139,92,246,0.06)';
-  ctx.lineWidth = 1;
-  const startX = Math.max(0, Math.floor((cam.x - canvasW / 2) / GRID_SIZE) * GRID_SIZE);
-  const endX = Math.min(MAP_WIDTH, cam.x + canvasW / 2 + GRID_SIZE);
-  const startY = Math.max(0, Math.floor((cam.y - canvasH / 2) / GRID_SIZE) * GRID_SIZE);
-  const endY = Math.min(MAP_HEIGHT, cam.y + canvasH / 2 + GRID_SIZE);
-  for (let x = startX; x <= endX; x += GRID_SIZE) {
-    ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, endY); ctx.stroke();
-  }
-  for (let y = startY; y <= endY; y += GRID_SIZE) {
-    ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(endX, y); ctx.stroke();
+    ctx.drawImage(images.ground, 0, 0, MAP_WIDTH, MAP_HEIGHT);
   }
 
   // Map border
