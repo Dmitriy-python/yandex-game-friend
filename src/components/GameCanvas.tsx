@@ -15,11 +15,15 @@ import UpgradeShop from './game/UpgradeShop';
 import GameHUD from './game/GameHUD';
 import UpgradeModal from './game/UpgradeModal';
 import GameOverScreen from './game/GameOverScreen';
+import VirtualJoystick from './game/VirtualJoystick';
+import AbilityButton from './game/AbilityButton';
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>(createInitialState());
   const keysRef = useRef<Set<string>>(new Set());
+  const joystickRef = useRef({ dx: 0, dy: 0 });
+  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const saveDataRef = useRef<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {}, unlockedCharacters: ['fighter'] });
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
@@ -103,6 +107,9 @@ export default function GameCanvas() {
     if (keys.has('s')) dy += 1;
     if (keys.has('a')) dx -= 1;
     if (keys.has('d')) dx += 1;
+    // Merge joystick input
+    const j = joystickRef.current;
+    if (j.dx !== 0 || j.dy !== 0) { dx = j.dx; dy = j.dy; }
 
     stateRef.current = updateGame(stateRef.current, dt, { dx, dy });
 
@@ -204,6 +211,15 @@ export default function GameCanvas() {
     setSelectedClass(charId as CharacterClass);
   }, [persistSave]);
 
+  const handleJoystickMove = useCallback((dx: number, dy: number) => {
+    joystickRef.current = { dx, dy };
+  }, []);
+
+  const handleAbilityUse = useCallback(() => {
+    keysRef.current.add(' ');
+    setTimeout(() => keysRef.current.delete(' '), 100);
+  }, []);
+
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
   }
@@ -235,10 +251,23 @@ export default function GameCanvas() {
 
       <GameHUD {...uiState} />
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
-        style={{ color: 'rgba(148,163,184,0.5)' }}>
-        WASD • Авто-атака • ESC пауза
-      </div>
+      {!isMobile && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
+          style={{ color: 'rgba(148,163,184,0.5)' }}>
+          WASD • Авто-атака • ESC пауза
+        </div>
+      )}
+
+      {isMobile && screen === 'playing' && !uiState.gameOver && !uiState.pendingUpgrade && (
+        <>
+          <VirtualJoystick onMove={handleJoystickMove} />
+          <AbilityButton
+            abilityTimer={uiState.abilityTimer}
+            abilityCooldown={uiState.abilityCooldown}
+            onUse={handleAbilityUse}
+          />
+        </>
+      )}
 
       {screen === 'paused' && (
         <PauseMenu onResume={handleResume} onMainMenu={handleMainMenu} />
