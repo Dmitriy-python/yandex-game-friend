@@ -20,8 +20,6 @@ export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GameState>(createInitialState());
   const keysRef = useRef<Set<string>>(new Set());
-  const joystickRef = useRef({ dx: 0, dy: 0 });
-  const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
   const saveDataRef = useRef<SaveData>({ highScore: 0, highWave: 0, coins: 0, upgrades: {}, unlockedCharacters: ['fighter'] });
   const [screen, setScreen] = useState<GameScreen>('loading');
   const [selectedClass, setSelectedClass] = useState<CharacterClass>('fighter');
