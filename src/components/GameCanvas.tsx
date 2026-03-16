@@ -247,7 +247,7 @@ export default function GameCanvas() {
 
   return (
     <div className="relative w-screen h-screen overflow-hidden" style={{ background: '#1a1f2e' }}>
-      <canvas ref={canvasRef} className="block w-full h-full" />
+      <canvas ref={canvasRef} className="block" />
 
       <GameHUD {...uiState} />
 
