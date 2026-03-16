@@ -204,10 +204,16 @@ export default function GameCanvas() {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
   }
 
+  const handleAdReward = useCallback((adCoins: number) => {
+    const sd = saveDataRef.current;
+    persistSave({ ...sd, coins: sd.coins + adCoins });
+  }, [persistSave]);
+
   if (screen === 'menu') {
     return <MainMenu highScore={saveData.highScore} highWave={saveData.highWave} coins={saveData.coins}
       onPlay={handleStartGame} onCharacterSelect={() => setScreen('character_select')}
-      onShop={() => setScreen('shop')} onSettings={() => setScreen('settings')} />;
+      onShop={() => setScreen('shop')} onSettings={() => setScreen('settings')}
+      onAdReward={handleAdReward} />;
   }
 
   if (screen === 'settings') {
