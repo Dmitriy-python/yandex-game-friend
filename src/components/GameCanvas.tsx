@@ -199,15 +199,14 @@ export default function GameCanvas() {
     setSelectedClass(charId as CharacterClass);
   }, [persistSave]);
 
-
-  if (screen === 'loading') {
-    return <LoadingScreen onLoaded={() => setScreen('menu')} />;
-  }
-
   const handleAdReward = useCallback((adCoins: number) => {
     const sd = saveDataRef.current;
     persistSave({ ...sd, coins: sd.coins + adCoins });
   }, [persistSave]);
+
+  if (screen === 'loading') {
+    return <LoadingScreen onLoaded={() => setScreen('menu')} />;
+  }
 
   if (screen === 'menu') {
     return <MainMenu highScore={saveData.highScore} highWave={saveData.highWave} coins={saveData.coins}
