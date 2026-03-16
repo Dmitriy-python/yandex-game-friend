@@ -48,25 +48,6 @@ export default function GameHUD(props: GameHUDProps) {
           </div>
           <span className="text-xs font-mono" style={{ color: '#86efac' }}>Lv.{level}</span>
         </div>
-        {/* Ability cooldown */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold" style={{ color: abilityReady ? '#facc15' : '#64748b' }}>⚡</span>
-          <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: 'rgba(0,0,0,0.6)' }}>
-            <div className="h-full rounded-full transition-all duration-100"
-              style={{
-                width: `${abilityProgress * 100}%`,
-                background: abilityReady
-                  ? 'linear-gradient(90deg, #facc15, #f59e0b)'
-                  : 'linear-gradient(90deg, #475569, #64748b)',
-              }} />
-          </div>
-          <span className="text-xs font-mono" style={{ color: abilityReady ? '#fef08a' : '#94a3b8' }}>
-            {abilityReady ? '✦' : Math.ceil(abilityTimer) + 's'}
-          </span>
-        </div>
-        <span className="text-[10px] font-mono" style={{ color: '#94a3b8' }}>
-          {abilityName}{shieldActive ? ' 🛡️' : ''}
-        </span>
       </div>
 
       {/* Center - Time & Wave */}
