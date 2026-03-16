@@ -232,23 +232,10 @@ export default function GameCanvas() {
 
       <GameHUD {...uiState} />
 
-      {!isMobile && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
-          style={{ color: 'rgba(148,163,184,0.5)' }}>
-          WASD • Авто-атака • ESC пауза
-        </div>
-      )}
-
-      {isMobile && screen === 'playing' && !uiState.gameOver && !uiState.pendingUpgrade && (
-        <>
-          <VirtualJoystick onMove={handleJoystickMove} />
-          <AbilityButton
-            abilityTimer={uiState.abilityTimer}
-            abilityCooldown={uiState.abilityCooldown}
-            onUse={handleAbilityUse}
-          />
-        </>
-      )}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs pointer-events-none"
+        style={{ color: 'rgba(148,163,184,0.5)' }}>
+        WASD • Авто-атака • SPACE суператака • ESC пауза
+      </div>
 
       {screen === 'paused' && (
         <PauseMenu onResume={handleResume} onMainMenu={handleMainMenu} />
