@@ -15,8 +15,6 @@ import UpgradeShop from './game/UpgradeShop';
 import GameHUD from './game/GameHUD';
 import UpgradeModal from './game/UpgradeModal';
 import GameOverScreen from './game/GameOverScreen';
-import VirtualJoystick from './game/VirtualJoystick';
-import AbilityButton from './game/AbilityButton';
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
