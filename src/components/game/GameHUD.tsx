@@ -20,10 +20,6 @@ export default function GameHUD(props: GameHUDProps) {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const abilityReady = abilityTimer <= 0;
-  const abilityProgress = abilityReady ? 1 : 1 - (abilityTimer / abilityCooldown);
-  const abilityName = CLASS_ABILITY_NAMES[characterClass];
-
   return (
     <div className="absolute top-0 left-0 right-0 p-3 flex items-start justify-between pointer-events-none">
       {/* Left - HP & XP */}
