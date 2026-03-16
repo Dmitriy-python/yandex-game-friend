@@ -200,14 +200,6 @@ export default function GameCanvas() {
     setSelectedClass(charId as CharacterClass);
   }, [persistSave]);
 
-  const handleJoystickMove = useCallback((dx: number, dy: number) => {
-    joystickRef.current = { dx, dy };
-  }, []);
-
-  const handleAbilityUse = useCallback(() => {
-    keysRef.current.add(' ');
-    setTimeout(() => keysRef.current.delete(' '), 100);
-  }, []);
 
   if (screen === 'loading') {
     return <LoadingScreen onLoaded={() => setScreen('menu')} />;
