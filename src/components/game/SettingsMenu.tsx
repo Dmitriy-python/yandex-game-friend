@@ -23,19 +23,6 @@ export default function SettingsMenu({ onBack }: SettingsMenuProps) {
         <h2 className="text-2xl font-bold" style={{ color: '#e2e8f0' }}>⚙️ Настройки</h2>
 
         <div className="flex flex-col gap-4 w-full">
-          <div className="flex items-center justify-between p-3 rounded-lg"
-            style={{ background: 'rgba(255,255,255,0.05)' }}>
-            <span className="text-sm font-bold" style={{ color: '#e2e8f0' }}>🎵 Музыка</span>
-            <button onClick={toggleMusic}
-              className="px-4 py-1.5 rounded-full text-xs font-bold cursor-pointer transition-all"
-              style={{
-                background: music ? 'rgba(74,222,128,0.2)' : 'rgba(239,68,68,0.2)',
-                border: `1px solid ${music ? 'rgba(74,222,128,0.4)' : 'rgba(239,68,68,0.4)'}`,
-                color: music ? '#4ade80' : '#ef4444',
-              }}>
-              {music ? 'ВКЛ' : 'ВЫКЛ'}
-            </button>
-          </div>
 
           <div className="flex items-center justify-between p-3 rounded-lg"
             style={{ background: 'rgba(255,255,255,0.05)' }}>
