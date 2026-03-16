@@ -1,4 +1,4 @@
-import { isMusicEnabled, isSfxEnabled, setMusicEnabled, setSfxEnabled } from '@/game/audio';
+import { isSfxEnabled, setSfxEnabled } from '@/game/audio';
 import { useState } from 'react';
 
 interface SettingsMenuProps {
@@ -6,14 +6,7 @@ interface SettingsMenuProps {
 }
 
 export default function SettingsMenu({ onBack }: SettingsMenuProps) {
-  const [music, setMusic] = useState(isMusicEnabled());
   const [sfx, setSfx] = useState(isSfxEnabled());
-
-  const toggleMusic = () => {
-    const newVal = !music;
-    setMusic(newVal);
-    setMusicEnabled(newVal);
-  };
 
   const toggleSfx = () => {
     const newVal = !sfx;
