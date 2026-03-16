@@ -1,4 +1,3 @@
-import { CLASS_ABILITY_NAMES } from '@/game/abilities';
 import { CharacterClass } from '@/game/types';
 
 interface GameHUDProps {
@@ -9,14 +8,11 @@ interface GameHUDProps {
   enemyCount: number;
   isBossWave: boolean;
   coins: number;
-  abilityTimer: number;
-  abilityCooldown: number;
   characterClass: CharacterClass;
-  shieldActive: boolean;
 }
 
 export default function GameHUD(props: GameHUDProps) {
-  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave, coins, abilityTimer, abilityCooldown, characterClass, shieldActive } = props;
+  const { hp, maxHp, xp, xpToNext, level, score, wave, time, enemyCount, isBossWave, coins } = props;
 
   const formatTime = (t: number) => {
     const m = Math.floor(t / 60);
