@@ -88,3 +88,25 @@ export async function setLeaderboardScore(score: number): Promise<void> {
     await lb.setLeaderboardScore('main', score);
   } catch {}
 }
+
+// Rewarded ad
+export async function showRewardedAd(): Promise<boolean> {
+  if (!ysdk) {
+    console.warn('Yandex SDK not available for ads');
+    // In dev/fallback mode, simulate success
+    return true;
+  }
+  try {
+    return await new Promise<boolean>((resolve) => {
+      ysdk.adv.showRewardedVideo({
+        callbacks: {
+          onRewarded: () => resolve(true),
+          onClose: () => {},
+          onError: () => resolve(false),
+        },
+      });
+    });
+  } catch {
+    return false;
+  }
+}
