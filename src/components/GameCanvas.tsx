@@ -122,7 +122,13 @@ export default function GameCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    renderGame(ctx, stateRef.current, canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    const logicalW = canvas.width / dpr;
+    const logicalH = canvas.height / dpr;
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    renderGame(ctx, stateRef.current, logicalW, logicalH);
+    ctx.restore();
 
     const s = stateRef.current;
 
