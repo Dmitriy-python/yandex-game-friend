@@ -141,10 +141,7 @@ export default function GameCanvas() {
       isBossWave: s.isBossWave && !s.bossWaveCleared,
       isBossReward: s.upgradeOptions.some(o => o.id.startsWith('boss_')),
       coins: s.coins,
-      abilityTimer: s.player.abilityTimer,
-      abilityCooldown: s.player.abilityCooldown,
       characterClass: s.player.characterClass,
-      shieldActive: s.player.shieldActive,
     });
   });
 
